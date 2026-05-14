@@ -27,28 +27,25 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Push') {
             steps {
-                script {
-                    sh "docker build --pull --no-cache -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest -f docker/php/Dockerfile ."
-                }
-            }
-        }
-
-        stage('Push to ECR') {
-            steps {
-                script {
-                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker push ${IMAGE_NAME}:latest"
-                }
+                sh """
+                    docker buildx build \
+                    --platform linux/amd64 \
+                    --pull \
+                    --no-cache \
+                    -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                    -t ${IMAGE_NAME}:latest \
+                    -f docker/php/Dockerfile \
+                    . \
+                    --push
+                """
             }
         }
 
         stage('Clean Up') {
             steps {
-                script {
-                    sh "docker image prune -af"
-                }
+                sh "docker image prune -af"
             }
         }
 
