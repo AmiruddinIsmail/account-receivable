@@ -34,11 +34,9 @@ RUN apk add --no-cache \
     oniguruma-dev \
     libzip-dev \
     linux-headers \
-    openssl-dev \
-    brotli-dev \
     $PHPIZE_DEPS
 
-# Install PHP extensions (including swoole and redis)
+# Install PHP extensions
 RUN docker-php-ext-install \
     pdo \
     pdo_mysql \
@@ -47,15 +45,14 @@ RUN docker-php-ext-install \
     pcntl \
     zip \
     && pecl install redis \
-    && printf "\n" | pecl install swoole \
-    && docker-php-ext-enable redis swoole \
+    && docker-php-ext-enable redis \
     && apk del $PHPIZE_DEPS
 
 COPY --from=composer /app /var/www
 
 RUN chown -R www-data:www-data /var/www
 
-# Use start script as entrypoint
+# Optional start script
 COPY docker/start.sh /usr/local/bin/start
 RUN chmod +x /usr/local/bin/start
 
