@@ -24,14 +24,14 @@ class AccountStatisticsProjector extends Projector
     public function onInvoiceCreated(InvoiceCreated $event)
     {
         $stats = $this->getStats($event->accountId);
-        
+
         $stats->invoices_count++;
         $stats->total_principal_billed_amt += $event->amount;
         $stats->remaining_balance_amt += $event->amount;
         $stats->remaining_principal_amt += $event->amount;
         $stats->last_invoice_at = Carbon::parse($event->occuredAt);
         $stats->last_event_at = Carbon::parse($event->occuredAt);
-        
+
         $this->updateReportingMetrics($stats);
         $stats->save();
     }
@@ -39,12 +39,12 @@ class AccountStatisticsProjector extends Projector
     public function onLateChargeApplied(LateChargeApplied $event)
     {
         $stats = $this->getStats($event->accountId);
-        
+
         $stats->total_late_charge_billed_amt += $event->amount;
         $stats->remaining_balance_amt += $event->amount;
         $stats->remaining_late_charge_amt += $event->amount;
         $stats->last_event_at = Carbon::parse($event->occuredAt);
-        
+
         $this->updateReportingMetrics($stats);
         $stats->save();
     }
@@ -52,14 +52,14 @@ class AccountStatisticsProjector extends Projector
     public function onPaymentReceived(PaymentReceived $event)
     {
         $stats = $this->getStats($event->accountId);
-        
+
         $stats->total_payments_amt += $event->amount;
-        // PaymentReceived doesn't immediately reduce balance if not allocated? 
+        // PaymentReceived doesn't immediately reduce balance if not allocated?
         // Actually, balance should reflect total debt - total payments.
         $stats->remaining_balance_amt -= $event->amount;
         $stats->last_payment_at = Carbon::parse($event->occuredAt);
         $stats->last_event_at = Carbon::parse($event->occuredAt);
-        
+
         $this->updateReportingMetrics($stats);
         $stats->save();
     }
@@ -67,10 +67,11 @@ class AccountStatisticsProjector extends Projector
     public function onRefundIssued(RefundIssued $event)
     {
         $stats = $this->getStats($event->accountId);
-        
+
         $stats->total_refunded_amt += $event->amount;
+        $stats->remaining_balance_amt += $event->amount;
         $stats->last_event_at = Carbon::parse($event->occuredAt);
-        
+
         $this->updateReportingMetrics($stats);
         $stats->save();
     }
@@ -78,11 +79,11 @@ class AccountStatisticsProjector extends Projector
     public function onCreditNoteIssued(CreditNoteIssued $event)
     {
         $stats = $this->getStats($event->accountId);
-        
+
         $stats->total_credits_amt += $event->amount;
         $stats->remaining_balance_amt -= $event->amount;
         $stats->last_event_at = Carbon::parse($event->occuredAt);
-        
+
         $this->updateReportingMetrics($stats);
         $stats->save();
     }
@@ -91,10 +92,10 @@ class AccountStatisticsProjector extends Projector
     {
         $stats = $this->getStats($event->accountId);
         $stats->total_allocated_payments_amt += $event->amount;
-        if($event->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value){
+        if ($event->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
             $stats->total_allocated_principal_amt += $event->amount;
             $stats->remaining_principal_amt -= $event->amount;
-        }else if($event->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value){
+        } elseif ($event->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
             $stats->total_allocated_late_charge_amt += $event->amount;
             $stats->remaining_late_charge_amt -= $event->amount;
         }
@@ -107,10 +108,10 @@ class AccountStatisticsProjector extends Projector
         $stats = $this->getStats($event->accountId);
         $stats->total_allocated_payments_amt += $event->amount;
         $stats->unallocated_overpayment_amt -= $event->amount;
-        if($event->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value){
+        if ($event->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
             $stats->total_allocated_principal_amt += $event->amount;
             $stats->remaining_principal_amt -= $event->amount;
-        }else if($event->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value){
+        } elseif ($event->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
             $stats->total_allocated_late_charge_amt += $event->amount;
             $stats->remaining_late_charge_amt -= $event->amount;
         }
@@ -122,6 +123,16 @@ class AccountStatisticsProjector extends Projector
     {
         $stats = $this->getStats($event->accountId);
         $stats->total_allocated_credits_amt += $event->amount;
+
+        if ($event->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
+            $stats->total_allocated_principal_credits_amt += $event->amount;
+            $stats->remaining_principal_amt -= $event->amount;
+        } elseif ($event->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
+            $stats->total_allocated_late_charge_credits_amt += $event->amount;
+            $stats->remaining_late_charge_amt -= $event->amount;
+        }
+
+        $this->updateReportingMetrics($stats);
         $stats->save();
     }
 
@@ -129,11 +140,10 @@ class AccountStatisticsProjector extends Projector
     {
         $stats = $this->getStats($event->accountId);
         $stats->total_allocated_payments_amt -= $event->amount;
-        $stats->remaining_balance_amt += $event->amount; // Reversing payment increases balance
-        if($event->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value){
+        if ($event->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
             $stats->total_allocated_principal_amt -= $event->amount;
             $stats->remaining_principal_amt += $event->amount;
-        }else if($event->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value){
+        } elseif ($event->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
             $stats->total_allocated_late_charge_amt -= $event->amount;
             $stats->remaining_late_charge_amt += $event->amount;
         }
@@ -152,7 +162,7 @@ class AccountStatisticsProjector extends Projector
     {
         $stats = $this->getStats($event->accountId);
         $stats->unallocated_overpayment_amt -= $event->amount;
-        $stats->remaining_balance_amt += $event->amount;
+        $this->updateReportingMetrics($stats);
         $stats->save();
     }
 
@@ -171,12 +181,12 @@ class AccountStatisticsProjector extends Projector
             ->latest('occured_at')
             ->limit(3)
             ->avg('principal_billed_amt') ?: 1;
-        
+
         $stats->mia_score = (int) ceil($stats->remaining_principal_amt / max(1, $avgBilled));
-        
+
         // Delinquency Status
         $stats->is_delinquent = $stats->remaining_balance_amt > 0;
-        
+
         // Risk Level
         $stats->risk_level = match (true) {
             $stats->mia_score >= 3 => 'High',
@@ -188,6 +198,26 @@ class AccountStatisticsProjector extends Projector
         $totalBilled = $stats->total_principal_billed_amt + $stats->total_late_charge_billed_amt;
         $netCollected = $stats->total_payments_amt - $stats->total_refunded_amt;
         $stats->collection_rate = round(($netCollected / max(1, $totalBilled)) * 100, 2);
+
+        if ($stats->remaining_balance_amt > 0) {
+
+            $oldestOpenPrincipalInvoiceDate = AccountInvoice::query()
+                ->where('account_id', $stats->account_id)
+                ->where('principal_status', 'open')
+                ->min('occured_at');
+
+            $oldestOpenLateChargeInvoiceDate = AccountInvoice::query()
+                ->where('account_id', $stats->account_id)
+                ->where('late_charge_status', 'open')
+                ->min('occured_at');
+
+            $stats->oldest_open_principal_invoice_at = $oldestOpenPrincipalInvoiceDate;
+            $stats->oldest_open_late_charge_invoice_at = $oldestOpenLateChargeInvoiceDate;
+
+        } else {
+            $stats->oldest_open_principal_invoice_at = null;
+            $stats->oldest_open_late_charge_invoice_at = null;
+        }
     }
 
     public function onStartingEventReplay()

@@ -4,44 +4,67 @@ namespace App\Externals\Spider\Actions;
 
 use App\Aggregates\AccountAggregate;
 use App\Externals\Spider\Repositories\TransactionRepository;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Spatie\EventSourcing\Facades\Projectionist;
 
 class ProcessTransactionToEvent
 {
-    public function handle(string $startDate, string $endDate)
+    public function handle(string $startDate, string $endDate, ?callable $output = null, bool $muteProjectors = false)
     {
-        $repository = new TransactionRepository();
+        DB::disableQueryLog();
+
+        if ($muteProjectors) {
+            $output && $output('info', 'NOTICE: Muting all projectors for fast historical import. Run `php artisan event-sourcing:replay` afterwards.');
+            Projectionist::withoutEventHandlers();
+        }
+
+        $repository = new TransactionRepository;
         $transactions = $repository->getTransactions($startDate, $endDate);
         $batchCount = 0;
+        $totalProcessed = 0;
         $aggregates = [];
         foreach ($transactions as $transaction) {
             try {
                 $this->processTransactionRow($transaction, $aggregates);
                 $batchCount++;
+                $totalProcessed++;
                 if ($batchCount >= 1000) {
+                    $output && $output('info', "Processed {$totalProcessed} transactions. Persisting batch (Current Date: {$transaction->date_at})...");
                     $this->persistAggregates($aggregates);
                     $aggregates = [];
                     $batchCount = 0;
+
+                    if (function_exists('gc_collect_cycles')) {
+                        gc_collect_cycles();
+                    }
                 }
             } catch (\Exception $e) {
-                Log::error("\nError processing row " . json_encode($transaction) . ": " . $e->getMessage());
+                $errorMsg = 'Error processing row '.json_encode($transaction).': '.$e->getMessage();
+                Log::error("\n".$errorMsg);
+                $output && $output('error', $errorMsg);
             }
         }
-        $this->persistAggregates($aggregates);
+        if (! empty($aggregates)) {
+            $output && $output('info', 'Persisting final batch of '.count($aggregates)." aggregates (Total processed: {$totalProcessed})...");
+            $this->persistAggregates($aggregates);
+        }
     }
 
     protected function processTransactionRow($row, array &$aggregates)
     {
         $mandate = $row->mandate ?? null;
-        if (!$mandate) return;
+        if (! $mandate) {
+            return;
+        }
 
         $type = $row->type ?? null;
-        $date = $row->date ?? null;
+        $date = $row->date_at ?? null;
         $referenceNo = $row->reference_no ?? null;
-        $amount = $row['amount'] ?? 0;
+        $amount = $row->amount ?? 0;
         $amountCents = (int) round(((float) $amount) * 100);
 
-        if (!isset($aggregates[$mandate])) {
+        if (! isset($aggregates[$mandate])) {
             $aggregates[$mandate] = AccountAggregate::retrieve($mandate);
         }
 

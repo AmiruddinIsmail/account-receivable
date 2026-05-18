@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class AccountStatistics extends Model
 {
     protected $primaryKey = 'account_id';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $guarded = [];
@@ -18,7 +20,7 @@ class AccountStatistics extends Model
         'total_invoices_amt' => 'integer',
         'total_payments_amt' => 'integer',
         'total_refunded_amt' => 'integer',
-        'total_credit_notes_amt' => 'integer',
+        'total_credits_amt' => 'integer',
         'total_allocated_principal_amt' => 'integer',
         'total_allocated_late_charge_amt' => 'integer',
         'total_allocated_payments_amt' => 'integer',

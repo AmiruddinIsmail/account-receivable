@@ -4,9 +4,8 @@ namespace App\Console\Commands;
 
 use App\Aggregates\AccountAggregate;
 use Illuminate\Console\Command;
-use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
+use Illuminate\Support\LazyCollection;
 use Spatie\EventSourcing\Facades\Projectionist;
 
 class ImportLegacyData extends Command
@@ -20,17 +19,19 @@ class ImportLegacyData extends Command
         $path = base_path($this->option('path'));
         $batchSize = (int) $this->option('batch');
 
-        if (!File::isDirectory($path)) {
+        if (! File::isDirectory($path)) {
             $this->error("Directory not found: {$path}");
+
             return 1;
         }
 
         $files = collect(File::files($path))
-            ->filter(fn($file) => $file->getExtension() === 'csv')
-            ->sortBy(fn($file) => $file->getFilename());
+            ->filter(fn ($file) => $file->getExtension() === 'csv')
+            ->sortBy(fn ($file) => $file->getFilename());
 
         if ($files->isEmpty()) {
             $this->warn("No CSV files found in {$path}");
+
             return 0;
         }
 
@@ -40,16 +41,15 @@ class ImportLegacyData extends Command
         $aggregates = [];
         $batchCount = 0;
 
-        $handlers = Projectionist::allEventHandlers()->toArray();
-        Projectionist::withoutEventHandlers();
-
+        // $handlers = Projectionist::allEventHandlers()->toArray();
+        // Projectionist::withoutEventHandlers();
 
         try {
             foreach ($files as $file) {
                 $this->line("Processing file: {$file->getFilename()}");
-                
+
                 $rows = $this->getCsvRows($file->getPathname());
-                
+
                 $bar = $this->output->createProgressBar();
                 $bar->start();
 
@@ -66,7 +66,7 @@ class ImportLegacyData extends Command
                             $batchCount = 0;
                         }
                     } catch (\Exception $e) {
-                        $this->error("\nError processing row " . json_encode($row) . ": " . $e->getMessage());
+                        $this->error("\nError processing row ".json_encode($row).': '.$e->getMessage());
                     }
                 }
 
@@ -76,13 +76,14 @@ class ImportLegacyData extends Command
                 $batchCount = 0;
 
                 $bar->finish();
-                $this->line("");
+                $this->line('');
             }
-        }finally {
-            Projectionist::addEventHandlers($handlers);
+        } finally {
+            // Projectionist::addEventHandlers($handlers);
         }
 
         $this->info("Import completed! Total rows processed: {$totalRows}");
+
         return 0;
     }
 
@@ -90,16 +91,21 @@ class ImportLegacyData extends Command
     {
         return LazyCollection::make(function () use ($filePath) {
             $handle = fopen($filePath, 'r');
-            if (!$handle) return;
+            if (! $handle) {
+                return;
+            }
 
             $headers = fgetcsv($handle);
-            if (!$headers) {
+            if (! $headers) {
                 fclose($handle);
+
                 return;
             }
 
             while (($data = fgetcsv($handle)) !== false) {
-                if (count($headers) !== count($data)) continue;
+                if (count($headers) !== count($data)) {
+                    continue;
+                }
                 yield array_combine($headers, $data);
             }
 
@@ -110,7 +116,9 @@ class ImportLegacyData extends Command
     protected function processRow(array $row, array &$aggregates)
     {
         $mandate = $row['mandate'] ?? null;
-        if (!$mandate) return;
+        if (! $mandate) {
+            return;
+        }
 
         $type = $row['type'] ?? null;
         $date = $row['date'] ?? null;
@@ -118,7 +126,7 @@ class ImportLegacyData extends Command
         $amount = $row['amount'] ?? 0;
         $amountCents = (int) round(((float) $amount) * 100);
 
-        if (!isset($aggregates[$mandate])) {
+        if (! isset($aggregates[$mandate])) {
             $aggregates[$mandate] = AccountAggregate::retrieve($mandate);
         }
 

@@ -19,9 +19,9 @@ it('updates account statistics when events are recorded', function () {
     )->persist();
 
     $stats = AccountStatistics::find($accountId);
-    expect($stats->total_invoices_count)->toBe(1);
-    expect($stats->total_invoiced_amount)->toBe(1000);
-    expect($stats->remaining_balance)->toBe(1000);
+    expect($stats->invoices_count)->toBe(1);
+    expect($stats->total_invoices_amt)->toBe(1000);
+    expect($stats->remaining_balance_amt)->toBe(1000);
 
     // 2. Receive Payment
     $aggregate->paymentReceived(
@@ -31,8 +31,8 @@ it('updates account statistics when events are recorded', function () {
     )->persist();
 
     $stats->refresh();
-    expect($stats->total_payments_received)->toBe(600);
-    expect($stats->remaining_balance)->toBe(400); // 1000 - 600
+    expect($stats->total_payments_amt)->toBe(600);
+    expect($stats->remaining_balance_amt)->toBe(400); // 1000 - 600
 
     // 3. Apply Late Charge
     $aggregate->lateChargeApplied(
@@ -43,8 +43,8 @@ it('updates account statistics when events are recorded', function () {
     )->persist();
 
     $stats->refresh();
-    expect($stats->total_lpc_amount)->toBe(50);
-    expect($stats->remaining_balance)->toBe(450);
+    expect($stats->total_late_charge_billed_amt)->toBe(50);
+    expect($stats->remaining_balance_amt)->toBe(450);
 
     // 4. Issue Credit Note
     $aggregate->creditNoteIssued(
@@ -55,8 +55,8 @@ it('updates account statistics when events are recorded', function () {
     )->persist();
 
     $stats->refresh();
-    expect($stats->total_credit_notes_amount)->toBe(100);
-    expect($stats->remaining_balance)->toBe(350);
+    expect($stats->total_credits_amt)->toBe(100);
+    expect($stats->remaining_balance_amt)->toBe(350);
 
     // 5. Refund Issued (Part of payment)
     $aggregate->refundIssued(
@@ -66,6 +66,6 @@ it('updates account statistics when events are recorded', function () {
     )->persist();
 
     $stats->refresh();
-    expect($stats->total_refunded_amount)->toBe(200);
-    expect($stats->remaining_balance)->toBe(550); // 350 + 200
+    expect($stats->total_refunded_amt)->toBe(200);
+    expect($stats->remaining_balance_amt)->toBe(550); // 350 + 200
 });

@@ -24,11 +24,17 @@ use Spatie\EventSourcing\AggregateRoots\AggregateRoot;
 class AccountAggregate extends AggregateRoot
 {
     public $invoices;
+
     public $availableOverpayments;
+
     public $availableCredits;
+
     public $allocations;
+
     public $payments;
+
     public $issuedCreditNotes;
+
     public $appliedLateCharges;
 
     public function __construct()
@@ -64,7 +70,7 @@ class AccountAggregate extends AggregateRoot
         $remaining = $this->overpaymentAllocations($referenceNo, $amount, AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value, $occuredAt);
 
         // If got remaining amount & got unused credit note apply next
-        $this->creditNoteAllocations($referenceNo, $remaining, AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value);
+        $this->creditNoteAllocations($referenceNo, $remaining, AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value, $occuredAt);
 
         return $this;
     }
@@ -75,7 +81,7 @@ class AccountAggregate extends AggregateRoot
             throw new Exception('Duplicate late charge');
         }
 
-        if (!isset($this->invoices[$invoiceNo])) {
+        if (! isset($this->invoices[$invoiceNo])) {
             throw new Exception('Invoice not found');
         }
 
@@ -95,7 +101,7 @@ class AccountAggregate extends AggregateRoot
         $remaining = $this->overpaymentAllocations($invoiceNo, $amount, AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value, $occuredAt);
 
         // If got remaining amount & got unused credit note apply next
-        $this->creditNoteAllocations($invoiceNo, $remaining, AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value);
+        $this->creditNoteAllocations($invoiceNo, $remaining, AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value, $occuredAt);
 
         return $this;
     }
@@ -123,7 +129,7 @@ class AccountAggregate extends AggregateRoot
     }
 
     public function creditNoteIssued(string $referenceNo, string $occuredAt, int $amount, ?string $invoiceNo = null)
-    {        
+    {
         if ($amount <= 0) {
             throw new Exception('Invalid amount');
         }
@@ -133,7 +139,7 @@ class AccountAggregate extends AggregateRoot
         }
 
         if ($invoiceNo !== null) {
-            if (!isset($this->invoices[$invoiceNo])) {
+            if (! isset($this->invoices[$invoiceNo])) {
                 throw new Exception('Invoice not found');
             }
 
@@ -159,7 +165,7 @@ class AccountAggregate extends AggregateRoot
         if ($invoiceNo !== null) {
             // Fix: Specify exactly this credit note to be allocated instead of looping all
             $amountToAllocate = min($amount, $this->invoicePrincipalBalance($this->invoices[$invoiceNo]));
-            
+
             $this->recordThat(new CreditNoteAllocated(
                 accountId: $this->uuid(),
                 invoiceNo: $invoiceNo,
@@ -167,13 +173,14 @@ class AccountAggregate extends AggregateRoot
                 component: AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value,
                 referenceNo: $referenceNo,
                 allocationId: (string) Str::uuid(),
+                occuredAt: $occuredAt,
             ));
 
             $remAmount = $amount - $amountToAllocate;
             $lpcBalance = $this->invoiceLateChargeBalance($this->invoices[$invoiceNo]);
             $lpcAllocate = min($remAmount, $lpcBalance);
 
-            if($lpcAllocate > 0){
+            if ($lpcAllocate > 0) {
                 $this->recordThat(new CreditNoteAllocated(
                     accountId: $this->uuid(),
                     invoiceNo: $invoiceNo,
@@ -181,9 +188,11 @@ class AccountAggregate extends AggregateRoot
                     component: AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value,
                     referenceNo: $referenceNo,
                     allocationId: (string) Str::uuid(),
-                ));                
+                    occuredAt: $occuredAt,
+                ));
             }
         }
+
         return $this;
     }
 
@@ -195,7 +204,7 @@ class AccountAggregate extends AggregateRoot
 
         // Validate refund limits before recording any events
         $availableForRefund = collect($this->availableOverpayments)->sum('remaining');
-        
+
         $reversedMap = collect($this->allocations)
             ->where('sourceType', AccountAllocationSourceTypeEnum::PAYMENT_REVERSAL->value)
             ->groupBy('allocationId')
@@ -205,7 +214,7 @@ class AccountAggregate extends AggregateRoot
         foreach ($this->allocations as $alloc) {
             if (in_array($alloc['sourceType'], [
                 AccountAllocationSourceTypeEnum::PAYMENT->value,
-                AccountAllocationSourceTypeEnum::OVERPAYMENT->value
+                AccountAllocationSourceTypeEnum::OVERPAYMENT->value,
             ])) {
                 $allocationId = $alloc['id'];
                 $alreadyReversed = $reversedMap[$allocationId] ?? 0;
@@ -228,7 +237,7 @@ class AccountAggregate extends AggregateRoot
         ));
 
         // STEP 1: CONSUME OVERPAYMENT FIRST
-        $remaining = $this->overpaymentReversal($referenceNo, $amount);   
+        $remaining = $this->overpaymentReversal($referenceNo, $amount);
 
         // STEP 2: REVERSE PAYMENT ALLOCATIONS (LIFO) // Include overpayment allocations as well
         $remaining = $this->paymentAllocationReversal($referenceNo, $remaining, $occuredAt);
@@ -236,15 +245,14 @@ class AccountAggregate extends AggregateRoot
         return $this;
     }
 
-    /** 
+    /**
      * ===================================
      * Apply Method
      * ===================================
      */
-
     public function applyInvoiceCreated(InvoiceCreated $event)
     {
-         $this->invoices[$event->referenceNo] = [
+        $this->invoices[$event->referenceNo] = [
             'invoiceNo' => $event->referenceNo,
             'occuredAt' => $event->occuredAt,
             'principalAmt' => $event->amount,
@@ -259,7 +267,7 @@ class AccountAggregate extends AggregateRoot
     {
         $this->appliedLateCharges[$event->referenceNo] = true;
         $this->invoices[$event->invoiceNo]['lateChargeAmt'] += $event->amount;
-        
+
         // Re-evaluate invoice status
         if ($this->invoiceBalance($this->invoices[$event->invoiceNo]) > 0) {
             $this->invoices[$event->invoiceNo]['status'] = AccountInvoiceStatusEnum::OPEN->value;
@@ -344,10 +352,7 @@ class AccountAggregate extends AggregateRoot
         ];
     }
 
-    public function applyRefundIssued(RefundIssued $event)
-    {
-
-    }
+    public function applyRefundIssued(RefundIssued $event) {}
 
     public function applyPaymentAllocationReversed(PaymentAllocationReversed $event)
     {
@@ -366,7 +371,7 @@ class AccountAggregate extends AggregateRoot
         $invoice['lateChargePaid'] = max(0, $invoice['lateChargePaid']);
 
         // set status open if paid less that principal
-        if($this->invoiceBalance($invoice) > 0) {
+        if ($this->invoiceBalance($invoice) > 0) {
             $invoice['status'] = AccountInvoiceStatusEnum::OPEN->value;
         }
 
@@ -375,16 +380,16 @@ class AccountAggregate extends AggregateRoot
             'id' => $event->id,
             'sourceType' => AccountAllocationSourceTypeEnum::PAYMENT_REVERSAL->value,
             'allocationId' => $event->allocationId,
-            'sourceNo'   => $event->paymentNo,
-            'invoiceNo'  => $invoiceNo,
-            'component'  => $event->component,
-            'amount'     => -$event->amount,
+            'sourceNo' => $event->paymentNo,
+            'invoiceNo' => $invoiceNo,
+            'component' => $event->component,
+            'amount' => -$event->amount,
         ];
     }
 
     public function applyOverpaymentRefunded(OverpaymentRefunded $event)
     {
-        if (!isset($this->availableOverpayments[$event->paymentNo])) {
+        if (! isset($this->availableOverpayments[$event->paymentNo])) {
             return;
         }
 
@@ -397,10 +402,10 @@ class AccountAggregate extends AggregateRoot
 
     protected function paymentPaidToInvoices(string $invoiceNo, int $amount, string $component)
     {
-        if (!isset($this->invoices[$invoiceNo])) {
+        if (! isset($this->invoices[$invoiceNo])) {
             throw new Exception("Invoice {$invoiceNo} not found");
         }
-        
+
         $invoice = &$this->invoices[$invoiceNo];
 
         if ($component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
@@ -449,12 +454,16 @@ class AccountAggregate extends AggregateRoot
         */
         foreach ($invoices as $invoice) {
 
-            if ($remaining <= 0) break;
+            if ($remaining <= 0) {
+                break;
+            }
 
             $principalOutstanding =
                 $invoice['principalAmt'] - $invoice['principalPaid'];
 
-            if ($principalOutstanding <= 0) continue;
+            if ($principalOutstanding <= 0) {
+                continue;
+            }
 
             $pay = min($principalOutstanding, $remaining);
 
@@ -478,12 +487,16 @@ class AccountAggregate extends AggregateRoot
         */
         foreach ($invoices as $invoice) {
 
-            if ($remaining <= 0) break;
+            if ($remaining <= 0) {
+                break;
+            }
 
             $lpcOutstanding =
                 $invoice['lateChargeAmt'] - $invoice['lateChargePaid'];
 
-            if ($lpcOutstanding <= 0) continue;
+            if ($lpcOutstanding <= 0) {
+                continue;
+            }
 
             $pay = min($lpcOutstanding, $remaining);
 
@@ -516,14 +529,16 @@ class AccountAggregate extends AggregateRoot
     }
 
     // Fix: Parameter renamed from $referenceNo to $invoiceNo
-    protected function overpaymentAllocations(string $invoiceNo, int $amount, string $component, string $occuredAt = null)
-    {   
+    protected function overpaymentAllocations(string $invoiceNo, int $amount, string $component, ?string $occuredAt = null)
+    {
         $remaining = $amount;
-        foreach(collect($this->availableOverpayments)->sortBy('occuredAt') as $overpayment) {
-            if($remaining <= 0) break;
+        foreach (collect($this->availableOverpayments)->sortBy('occuredAt') as $overpayment) {
+            if ($remaining <= 0) {
+                break;
+            }
 
             $apply = min($remaining, $overpayment['remaining']);
-            
+
             // Fix: Use OverpaymentAllocated event
             $this->recordThat(new OverpaymentAllocated(
                 accountId: $this->uuid(),
@@ -542,11 +557,13 @@ class AccountAggregate extends AggregateRoot
     }
 
     // Fix: Parameter renamed from $referenceNo to $invoiceNo
-    protected function creditNoteAllocations(string $invoiceNo, int $amount, string $component)
-    {   
+    protected function creditNoteAllocations(string $invoiceNo, int $amount, string $component, ?string $occuredAt = null)
+    {
         $remaining = $amount;
-        foreach(collect($this->availableCredits)->sortBy('occuredAt') as $credit) {
-            if($remaining <= 0) break;
+        foreach (collect($this->availableCredits)->sortBy('occuredAt') as $credit) {
+            if ($remaining <= 0) {
+                break;
+            }
 
             $apply = min($remaining, $credit['remaining']);
 
@@ -557,6 +574,7 @@ class AccountAggregate extends AggregateRoot
                 component: $component,
                 referenceNo: $credit['creditNoteNo'],
                 allocationId: (string) Str::uuid(),
+                occuredAt: $occuredAt,
             ));
 
             $remaining -= $apply;
@@ -570,7 +588,9 @@ class AccountAggregate extends AggregateRoot
         $remaining = $amount;
         foreach (collect($this->availableOverpayments)->sortByDesc('occuredAt') as $op) {
 
-            if ($remaining <= 0) break;
+            if ($remaining <= 0) {
+                break;
+            }
 
             $consume = min($remaining, $op['remaining']);
 
@@ -592,25 +612,31 @@ class AccountAggregate extends AggregateRoot
         $reversedMap = collect($this->allocations)
             ->where('sourceType', AccountAllocationSourceTypeEnum::PAYMENT_REVERSAL->value)
             ->groupBy('allocationId')
-            ->map(fn ($rows) => $rows->sum('amount')); // negative values  
+            ->map(fn ($rows) => $rows->sum('amount')); // negative values
 
         $remaining = $amount;
         foreach (array_reverse($this->allocations) as $alloc) {
 
-            if ($remaining <= 0) break;
+            if ($remaining <= 0) {
+                break;
+            }
 
             // Fix: Include overpayment allocations for reversal as well
-            if (!in_array($alloc['sourceType'], [
+            if (! in_array($alloc['sourceType'], [
                 AccountAllocationSourceTypeEnum::PAYMENT->value,
-                AccountAllocationSourceTypeEnum::OVERPAYMENT->value
-            ])) continue;
+                AccountAllocationSourceTypeEnum::OVERPAYMENT->value,
+            ])) {
+                continue;
+            }
 
             $allocationId = $alloc['id'];
 
             $alreadyReversed = $reversedMap[$allocationId] ?? 0;
 
             $available = $alloc['amount'] + $alreadyReversed;
-            if ($available <= 0) continue;
+            if ($available <= 0) {
+                continue;
+            }
 
             $reversal = min($remaining, $available);
 

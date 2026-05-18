@@ -13,5 +13,6 @@ class CreditNoteAllocated extends ShouldBeStored
         public int $amount,
         public string $component,
         public string $allocationId,
-    ){}
+        public string $occuredAt,
+    ) {}
 }

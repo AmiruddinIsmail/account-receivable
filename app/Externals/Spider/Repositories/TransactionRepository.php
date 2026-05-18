@@ -32,7 +32,9 @@ class TransactionRepository
                 1 AS sort_order
             FROM
                 ar_invoices ai
-                LEFT JOIN `order` o ON o.customer_id = ai.customer_id
+                INNER JOIN `order` o
+                    ON o.customer_id = ai.customer_id
+                    AND o.order_status_id IN (1,2)
             WHERE
                 ai.issue_date BETWEEN ? AND ?
             UNION ALL
@@ -47,7 +49,9 @@ class TransactionRepository
                 2 AS sort_order
             FROM
                 ar_invoices ai
-                LEFT JOIN `order` o ON o.customer_id = ai.customer_id
+                INNER JOIN `order` o
+                    ON o.customer_id = ai.customer_id
+                    AND o.order_status_id IN (1,2)
             WHERE
                 ai.issue_date BETWEEN ? AND ?
                 AND ai.late_payment_charges > 0
@@ -63,7 +67,9 @@ class TransactionRepository
                 3 AS sort_order
             FROM
                 ar_credit_notes cn
-                LEFT JOIN `order` o ON o.customer_id = cn.customer_id
+                INNER JOIN `order` o
+                    ON o.customer_id = cn.customer_id
+                    AND o.order_status_id IN (1,2)
             WHERE
                 cn.issue_date BETWEEN ? AND ?
             UNION ALL
@@ -72,25 +78,15 @@ class TransactionRepository
                 LOWER(ABS.type) AS type,
                 o.orderId AS mandate,
                 CONCAT('PAY-', ABS.id) AS id,
-                MD5(
-                    CONCAT(
-                        TRIM(COALESCE(ABS.curlec_refno, '')),
-                        '|',
-                        COALESCE(ABS.amount, 0),
-                        '|',
-                        DATE_FORMAT(ABS.transaction_at, '%Y-%m-%d %H:%i:%s'),
-                        '|',
-                        TRIM(COALESCE(ABS.description, '')),
-                        '|',
-                        TRIM(COALESCE(ABS.reference_no, ''))
-                    )
-                ) AS reference_no,
+                ABS.checksum AS reference_no,
                 ABS.customer_id,
                 ABS.amount,
                 4 AS sort_order
             FROM
                 account_bank_statements ABS
-                LEFT JOIN `order` o ON o.customer_id = ABS.customer_id
+                INNER JOIN `order` o
+                    ON o.customer_id = ABS.customer_id
+                    AND o.order_status_id IN (1,2)
             WHERE
                 ABS.transaction_at BETWEEN ? AND ?
                 AND ABS.customer_id IS NOT NULL
