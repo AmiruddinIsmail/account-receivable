@@ -21,8 +21,8 @@ class InvoiceProjector extends Projector
         AccountInvoice::create([
             'account_id' => $event->accountId,
             'reference_no' => $event->referenceNo,
-            'occured_at' => $event->occuredAt,
-            'due_at' => Carbon::parse($event->occuredAt)->addDay(),
+            'occurred_at' => $event->occurredAt,
+            'due_at' => Carbon::parse($event->occurredAt)->addDay(),
             'principal_billed_amt' => $event->amount,
             'late_charge_billed_amt' => 0,
             'principal_paid_amt' => 0,

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4d4c5955176a87a620028f2dcb566132",
+    "content-hash": "d4457be721f78c37c6774bbc8e36f052",
     "packages": [
         {
             "name": "brick/math",
@@ -1100,6 +1100,73 @@
                 }
             ],
             "time": "2025-08-22T14:27:06+00:00"
+        },
+        {
+            "name": "laravel-notification-channels/microsoft-teams",
+            "version": "2.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel-notification-channels/microsoft-teams.git",
+                "reference": "c5b93c3751f19b11e2a5d40447ef23c581abcc72"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel-notification-channels/microsoft-teams/zipball/c5b93c3751f19b11e2a5d40447ef23c581abcc72",
+                "reference": "c5b93c3751f19b11e2a5d40447ef23c581abcc72",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^7.0",
+                "illuminate/notifications": "^12.0 || ^13.0",
+                "illuminate/support": "^12.0 || ^13.0",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "mockery/mockery": "^1.6",
+                "pestphp/pest": "^3.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "NotificationChannels\\MicrosoftTeams\\MicrosoftTeamsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "NotificationChannels\\MicrosoftTeams\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Tobias Madner",
+                    "email": "tobias.madner@gmx.at",
+                    "homepage": "https://www.tournamize.com",
+                    "role": "Owner"
+                }
+            ],
+            "description": "A Laravel Notification Channel for Microsoft Teams",
+            "homepage": "https://github.com/laravel-notification-channels/microsoft-teams",
+            "support": {
+                "issues": "https://github.com/laravel-notification-channels/microsoft-teams/issues",
+                "source": "https://github.com/laravel-notification-channels/microsoft-teams/tree/2.2.1"
+            },
+            "funding": [
+                {
+                    "url": "https://paypal.me/TMadner",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/Tob0t",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-03-26T23:55:01+00:00"
         },
         {
             "name": "laravel/framework",
@@ -9517,23 +9584,23 @@
         },
         {
             "name": "sebastian/cli-parser",
-            "version": "4.2.0",
+            "version": "4.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/cli-parser.git",
-                "reference": "90f41072d220e5c40df6e8635f5dafba2d9d4d04"
+                "reference": "7d05781b13f7dec9043a629a21d086ed74582a15"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/cli-parser/zipball/90f41072d220e5c40df6e8635f5dafba2d9d4d04",
-                "reference": "90f41072d220e5c40df6e8635f5dafba2d9d4d04",
+                "url": "https://api.github.com/repos/sebastianbergmann/cli-parser/zipball/7d05781b13f7dec9043a629a21d086ed74582a15",
+                "reference": "7d05781b13f7dec9043a629a21d086ed74582a15",
                 "shasum": ""
             },
             "require": {
                 "php": ">=8.3"
             },
             "require-dev": {
-                "phpunit/phpunit": "^12.0"
+                "phpunit/phpunit": "^12.5.25"
             },
             "type": "library",
             "extra": {
@@ -9562,7 +9629,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/cli-parser/issues",
                 "security": "https://github.com/sebastianbergmann/cli-parser/security/policy",
-                "source": "https://github.com/sebastianbergmann/cli-parser/tree/4.2.0"
+                "source": "https://github.com/sebastianbergmann/cli-parser/tree/4.2.1"
             },
             "funding": [
                 {
@@ -9582,7 +9649,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-09-14T09:36:45+00:00"
+            "time": "2026-05-17T05:29:34+00:00"
         },
         {
             "name": "sebastian/comparator",

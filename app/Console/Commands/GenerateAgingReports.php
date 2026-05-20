@@ -32,7 +32,7 @@ class GenerateAgingReports extends Command
 
     protected function processAllMonths()
     {
-        $firstEvent = AccountStatement::min('occured_at');
+        $firstEvent = AccountStatement::min('occurred_at');
         if (!$firstEvent) return;
 
         $start = Carbon::parse($firstEvent)->startOfMonth();
@@ -51,7 +51,7 @@ class GenerateAgingReports extends Command
 
         $this->info("Generating Aging Report for {$yearMonth}...");
 
-        $accountIds = AccountStatement::where('occured_at', '<=', $endOfMonth->toDateString())
+        $accountIds = AccountStatement::where('occurred_at', '<=', $endOfMonth->toDateString())
             ->distinct()
             ->pluck('account_id');
 
@@ -63,7 +63,7 @@ class GenerateAgingReports extends Command
 
             // 1. Get ALL invoices created on or before EOM
             $invoices = AccountInvoice::where('account_id', $accountId)
-                ->where('occured_at', '<=', $endOfMonth->toDateString())
+                ->where('occurred_at', '<=', $endOfMonth->toDateString())
                 ->get();
 
             // 2. Get ALL allocations applied on or before EOM
@@ -96,7 +96,7 @@ class GenerateAgingReports extends Command
 
                 if ($outstanding > 0) {
                     // Place into bucket based on invoice age relative to endOfMonth
-                    $invoiceDate = Carbon::parse($invoice->occured_at);
+                    $invoiceDate = Carbon::parse($invoice->occurred_at);
                     $diffInMonths = $invoiceDate->diffInMonths($endOfMonth);
 
                     if ($diffInMonths == 0) $buckets['current'] += $outstanding;

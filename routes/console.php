@@ -1,9 +1,7 @@
 <?php
 
-use App\Aggregates\AccountAggregate;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schedule;
 
 // Schedule::command('app:daily-spider-transaction-processor')->daily();
 

@@ -19,7 +19,7 @@ class CreditNoteAllocationProjector extends Projector
             'component' => $event->component,
             'amount' => $event->amount,
             'action' => AccountAllocationActionEnum::ALLOCATE->value,
-            'created_at' => $event->occuredAt ? Carbon::createFromFormat('Y-m-d', $event->occuredAt) : now(),
+            'created_at' => $event->occurredAt ? Carbon::createFromFormat('Y-m-d', $event->occurredAt) : now(),
         ]);
     }
 }

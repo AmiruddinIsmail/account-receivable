@@ -29,8 +29,8 @@ class AccountStatisticsProjector extends Projector
         $stats->total_principal_billed_amt += $event->amount;
         $stats->remaining_balance_amt += $event->amount;
         $stats->remaining_principal_amt += $event->amount;
-        $stats->last_invoice_at = Carbon::parse($event->occuredAt);
-        $stats->last_event_at = Carbon::parse($event->occuredAt);
+        $stats->last_invoice_at = Carbon::parse($event->occurredAt);
+        $stats->last_event_at = Carbon::parse($event->occurredAt);
 
         $this->updateReportingMetrics($stats);
         $stats->save();
@@ -43,7 +43,7 @@ class AccountStatisticsProjector extends Projector
         $stats->total_late_charge_billed_amt += $event->amount;
         $stats->remaining_balance_amt += $event->amount;
         $stats->remaining_late_charge_amt += $event->amount;
-        $stats->last_event_at = Carbon::parse($event->occuredAt);
+        $stats->last_event_at = Carbon::parse($event->occurredAt);
 
         $this->updateReportingMetrics($stats);
         $stats->save();
@@ -57,8 +57,8 @@ class AccountStatisticsProjector extends Projector
         // PaymentReceived doesn't immediately reduce balance if not allocated?
         // Actually, balance should reflect total debt - total payments.
         $stats->remaining_balance_amt -= $event->amount;
-        $stats->last_payment_at = Carbon::parse($event->occuredAt);
-        $stats->last_event_at = Carbon::parse($event->occuredAt);
+        $stats->last_payment_at = Carbon::parse($event->occurredAt);
+        $stats->last_event_at = Carbon::parse($event->occurredAt);
 
         $this->updateReportingMetrics($stats);
         $stats->save();
@@ -70,7 +70,7 @@ class AccountStatisticsProjector extends Projector
 
         $stats->total_refunded_amt += $event->amount;
         $stats->remaining_balance_amt += $event->amount;
-        $stats->last_event_at = Carbon::parse($event->occuredAt);
+        $stats->last_event_at = Carbon::parse($event->occurredAt);
 
         $this->updateReportingMetrics($stats);
         $stats->save();
@@ -82,7 +82,7 @@ class AccountStatisticsProjector extends Projector
 
         $stats->total_credits_amt += $event->amount;
         $stats->remaining_balance_amt -= $event->amount;
-        $stats->last_event_at = Carbon::parse($event->occuredAt);
+        $stats->last_event_at = Carbon::parse($event->occurredAt);
 
         $this->updateReportingMetrics($stats);
         $stats->save();
@@ -178,7 +178,7 @@ class AccountStatisticsProjector extends Projector
 
         // MIA Calculation
         $avgBilled = AccountInvoice::where('account_id', $stats->account_id)
-            ->latest('occured_at')
+            ->latest('occurred_at')
             ->limit(3)
             ->avg('principal_billed_amt') ?: 1;
 
@@ -204,12 +204,12 @@ class AccountStatisticsProjector extends Projector
             $oldestOpenPrincipalInvoiceDate = AccountInvoice::query()
                 ->where('account_id', $stats->account_id)
                 ->where('principal_status', 'open')
-                ->min('occured_at');
+                ->min('occurred_at');
 
             $oldestOpenLateChargeInvoiceDate = AccountInvoice::query()
                 ->where('account_id', $stats->account_id)
                 ->where('late_charge_status', 'open')
-                ->min('occured_at');
+                ->min('occurred_at');
 
             $stats->oldest_open_principal_invoice_at = $oldestOpenPrincipalInvoiceDate;
             $stats->oldest_open_late_charge_invoice_at = $oldestOpenLateChargeInvoiceDate;

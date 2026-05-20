@@ -21,7 +21,7 @@ class PaymentAllocationProjector extends Projector
             'component' => $event->component,
             'amount' => $event->amount,
             'action' => AccountAllocationActionEnum::ALLOCATE->value,
-            'created_at' => Carbon::createFromFormat('Y-m-d', $event->occuredAt),
+            'created_at' => Carbon::createFromFormat('Y-m-d', $event->occurredAt),
         ]);
     }
 
@@ -34,7 +34,7 @@ class PaymentAllocationProjector extends Projector
             'component' => $event->component,
             'amount' => $event->amount,
             'action' => AccountAllocationActionEnum::ALLOCATE->value,
-            'created_at' => Carbon::createFromFormat('Y-m-d', $event->occuredAt),
+            'created_at' => Carbon::createFromFormat('Y-m-d', $event->occurredAt),
         ]);
     }
 
@@ -47,7 +47,7 @@ class PaymentAllocationProjector extends Projector
             'component' => $event->component,
             'amount' => $event->amount,
             'action' => AccountAllocationActionEnum::REVERSE->value,
-            'created_at' => Carbon::createFromFormat('Y-m-d', $event->occuredAt),
+            'created_at' => Carbon::createFromFormat('Y-m-d', $event->occurredAt),
         ]);
     }
 }

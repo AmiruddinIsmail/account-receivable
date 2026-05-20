@@ -35,7 +35,7 @@ class GenerateMonthlySnapshots extends Command
     protected function processAllMonths()
     {
         // Find the earliest event date to start from
-        $firstEvent = AccountStatement::min('occured_at');
+        $firstEvent = AccountStatement::min('occurred_at');
         
         if (!$firstEvent) {
             $this->error("No account activity found in Statement of Account.");
@@ -62,7 +62,7 @@ class GenerateMonthlySnapshots extends Command
         $this->info("Generating point-in-time snapshots for {$yearMonth}...");
 
         // Get all impact accounts up to this point in time
-        $accountIds = AccountStatement::where('occured_at', '<=', $endOfMonth->toDateString())
+        $accountIds = AccountStatement::where('occurred_at', '<=', $endOfMonth->toDateString())
             ->distinct()
             ->pluck('account_id');
 
@@ -82,7 +82,7 @@ class GenerateMonthlySnapshots extends Command
 
             // 2. Metrics for this specific month from Statement (Raw activity)
             $monthlyMetrics = AccountStatement::where('account_id', $accountId)
-                ->whereBetween('occured_at', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+                ->whereBetween('occurred_at', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
                 ->selectRaw('
                     SUM(CASE WHEN type = "'.AccountCommandTypeEnum::INVOICE->value.'" THEN debit_amt ELSE 0 END) as billed_principal,
                     SUM(CASE WHEN type = "'.AccountCommandTypeEnum::LATE_CHARGE->value.'" THEN debit_amt ELSE 0 END) as billed_late_charge,
@@ -94,7 +94,7 @@ class GenerateMonthlySnapshots extends Command
             
             // Total Debt Created up to EOM
             $totalDebt = AccountInvoice::where('account_id', $accountId)
-                ->where('occured_at', '<=', $endOfMonth->toDateString())
+                ->where('occurred_at', '<=', $endOfMonth->toDateString())
                 ->selectRaw('SUM(principal_billed_amt) as p_total, SUM(late_charge_billed_amt) as l_total')
                 ->first();
 

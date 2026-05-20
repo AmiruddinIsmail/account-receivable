@@ -14,7 +14,7 @@ it('updates account statistics when events are recorded', function () {
     // 1. Create Invoice
     $aggregate->invoiceCreated(
         referenceNo: 'INV-001',
-        occuredAt: '2024-01-01',
+        occurredAt: '2024-01-01',
         amount: 1000
     )->persist();
 
@@ -26,7 +26,7 @@ it('updates account statistics when events are recorded', function () {
     // 2. Receive Payment
     $aggregate->paymentReceived(
         referenceNo: 'PAY-001',
-        occuredAt: '2024-01-05',
+        occurredAt: '2024-01-05',
         amount: 600
     )->persist();
 
@@ -37,7 +37,7 @@ it('updates account statistics when events are recorded', function () {
     // 3. Apply Late Charge
     $aggregate->lateChargeApplied(
         referenceNo: 'LPC-001',
-        occuredAt: '2024-01-10',
+        occurredAt: '2024-01-10',
         amount: 50,
         invoiceNo: 'INV-001'
     )->persist();
@@ -49,7 +49,7 @@ it('updates account statistics when events are recorded', function () {
     // 4. Issue Credit Note
     $aggregate->creditNoteIssued(
         referenceNo: 'CN-001',
-        occuredAt: '2024-01-15',
+        occurredAt: '2024-01-15',
         amount: 100,
         invoiceNo: 'INV-001'
     )->persist();
@@ -61,7 +61,7 @@ it('updates account statistics when events are recorded', function () {
     // 5. Refund Issued (Part of payment)
     $aggregate->refundIssued(
         referenceNo: 'REF-001',
-        occuredAt: '2024-01-20',
+        occurredAt: '2024-01-20',
         amount: 200
     )->persist();
 

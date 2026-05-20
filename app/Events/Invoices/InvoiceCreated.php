@@ -15,10 +15,10 @@ class InvoiceCreated extends BaseAccountEvent
         string $accountId,
         string $referenceNo,
         int $amount,
-        string $occuredAt,
+        string $occurredAt,
         public string $type,
     ) {
-        parent::__construct($accountId, $referenceNo, $amount, $occuredAt);
+        parent::__construct($accountId, $referenceNo, $amount, $occurredAt);
     }
 
 }

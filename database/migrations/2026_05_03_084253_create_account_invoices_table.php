@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('account_id')->index();
             $table->string('reference_no')->index();
-            $table->date('occured_at');
+            $table->date('occurred_at');
             $table->date('due_at');
             $table->integer('principal_billed_amt');
             $table->integer('late_charge_billed_amt');
