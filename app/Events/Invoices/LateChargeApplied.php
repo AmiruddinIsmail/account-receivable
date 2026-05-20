@@ -17,7 +17,7 @@ class LateChargeApplied extends BaseAccountEvent
         int $amount,
         string $occurredAt,
         public string $invoiceNo,
-    ) {        
+    ) {
         parent::__construct($accountId, $referenceNo, $amount, $occurredAt);
     }
 

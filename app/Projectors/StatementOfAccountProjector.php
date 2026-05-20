@@ -89,7 +89,7 @@ class StatementOfAccountProjector extends Projector
         string $description
     ) {
         $balanceImpact = $debit - $credit;
-        
+
         $latestStatement = AccountStatement::where('account_id', $accountId)
             ->latest('id')
             ->first();
@@ -97,7 +97,7 @@ class StatementOfAccountProjector extends Projector
         $currentBalance = $latestStatement ? $latestStatement->running_balance : 0;
         $newBalance = $currentBalance + $balanceImpact;
 
-        if($type === AccountCommandTypeEnum::INVOICE->value) {
+        if ($type === AccountCommandTypeEnum::INVOICE->value) {
             $invoiceCount = AccountStatement::query()
                 ->where('account_id', $accountId)
                 ->where('type', AccountCommandTypeEnum::INVOICE->value)

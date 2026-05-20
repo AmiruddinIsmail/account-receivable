@@ -22,13 +22,14 @@ class GenerateMonthlySnapshots extends Command
     {
         if ($this->option('all')) {
             $this->processAllMonths();
+
             return;
         }
 
-        $targetMonth = $this->option('month') 
-            ? Carbon::createFromFormat('Y-m', $this->option('month')) 
+        $targetMonth = $this->option('month')
+            ? Carbon::createFromFormat('Y-m', $this->option('month'))
             : Carbon::now()->subMonth();
-            
+
         $this->generateForMonth($targetMonth);
     }
 
@@ -36,9 +37,10 @@ class GenerateMonthlySnapshots extends Command
     {
         // Find the earliest event date to start from
         $firstEvent = AccountStatement::min('occurred_at');
-        
-        if (!$firstEvent) {
-            $this->error("No account activity found in Statement of Account.");
+
+        if (! $firstEvent) {
+            $this->error('No account activity found in Statement of Account.');
+
             return;
         }
 
@@ -50,7 +52,7 @@ class GenerateMonthlySnapshots extends Command
             $start->addMonth();
         }
 
-        $this->info("All historic months processed.");
+        $this->info('All historic months processed.');
     }
 
     protected function generateForMonth(Carbon $targetMonth)
@@ -70,6 +72,7 @@ class GenerateMonthlySnapshots extends Command
             // Immutability Check
             if (AccountMonthlySnapshot::where('account_id', $accountId)->where('year_month', $yearMonth)->exists()) {
                 $this->warn("Account {$accountId} already has a record for {$yearMonth}. Skipping.");
+
                 continue;
             }
 
@@ -91,7 +94,7 @@ class GenerateMonthlySnapshots extends Command
 
             // 3. POINT-IN-TIME BALANCE RECONSTRUCTION
             // Logic: Total Debt Created <= EOM minus Total Allocations <= EOM
-            
+
             // Total Debt Created up to EOM
             $totalDebt = AccountInvoice::where('account_id', $accountId)
                 ->where('occurred_at', '<=', $endOfMonth->toDateString())
@@ -103,14 +106,18 @@ class GenerateMonthlySnapshots extends Command
             $historicalPaid = AccountPaymentAllocation::where('account_id', $accountId)
                 ->where('created_at', '<=', $endOfMonth->copy()->addDay()->startOfDay()) // Use creation date for allocation timing
                 ->get();
-            
+
             $pPaid = 0;
             $lPaid = 0;
 
             foreach ($historicalPaid as $alloc) {
                 $impact = ($alloc->action === AccountAllocationActionEnum::REVERSE->value) ? -$alloc->amount : $alloc->amount;
-                if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) $pPaid += $impact;
-                if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) $lPaid += $impact;
+                if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
+                    $pPaid += $impact;
+                }
+                if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
+                    $lPaid += $impact;
+                }
             }
 
             $principalBalance = max(0, ($totalDebt->p_total ?? 0) - $pPaid);

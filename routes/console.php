@@ -1,5 +1,6 @@
 <?php
 
+use App\Aggregates\AccountAggregate;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
@@ -13,8 +14,8 @@ Artisan::command('inspire', function () {
     //     ->persist();
 
     // AccountAggregate::retrieve('A001')
-    //     ->paymentReceived('PAY-001', '2026-01-02', 10000)
-    //     ->persist();        
+    //     ->paymentReceived('PAY-001', '2026-01-02', 14000)
+    //     ->persist();
 
     // // AccountAggregate::retrieve('A001')
     // //     ->lateChargeApplied('LAT-001', '2026-01-01', 4000, 'INV-001')
@@ -26,7 +27,7 @@ Artisan::command('inspire', function () {
 
     // AccountAggregate::retrieve('A001')
     //     ->invoiceCreated('INV-003', '2026-03-01', 10000)
-    //     ->persist();        
+    //     ->persist();
 
     // AccountAggregate::retrieve('A001')
     //     ->lateChargeApplied('LAT-001', '2026-03-01', 4000, 'INV-003')
@@ -38,11 +39,11 @@ Artisan::command('inspire', function () {
 
     // AccountAggregate::retrieve('A001')
     //     ->invoiceCreated('INV-004', '2026-04-01', 10000)
-    //     ->persist();        
+    //     ->persist();
 
     // AccountAggregate::retrieve('A001')
     //     ->lateChargeApplied('LAT-002', '2026-04-01', 4000, 'INV-004')
-    //     ->persist();        
+    //     ->persist();
 
     // AccountAggregate::retrieve('A001')
     //     ->paymentReceived('PAY-003', '2026-04-02', 14000)
@@ -50,7 +51,7 @@ Artisan::command('inspire', function () {
 
     // AccountAggregate::retrieve('A001')
     //     ->invoiceCreated('INV-005', '2026-04-01', 5000, 'Unlock Fee')
-    //     ->persist(); 
+    //     ->persist();
 
     // AccountAggregate::retrieve('A001')
     //     ->invoiceCreated('INV-003', '2026-03-01', 10000)
@@ -62,24 +63,23 @@ Artisan::command('inspire', function () {
 
     // AccountAggregate::retrieve('A001')
     //     ->refundIssued('REF-002', '2026-03-06', 6000)
-    //     ->persist();    
+    //     ->persist();
 
     // AccountAggregate::retrieve('A001')
     //     ->refundIssued('REF-002', '2026-02-06', 4000)
-    //     ->persist(); 
-    
+    //     ->persist();
+
     // AccountAggregate::retrieve('A001')
     //     ->refundIssued('REF-003', '2026-02-06', 4000)
-    //     ->persist();     
+    //     ->persist();
 
     // AccountAggregate::retrieve('A001')
     //     ->paymentReceived('PAY-002', '2026-02-07', 4000)
     //     ->persist();
 
-
     // AccountAggregate::retrieve('A001')
     //     ->invoiceCreated('INV-003', '2026-02-01', 10000);
-        // ->persist();
+    // ->persist();
 
     // AccountAggregate::retrieve('A001')
     //     ->paymentReceived('PAY-002', '2026-02-05', 16000)
@@ -95,6 +95,6 @@ Artisan::command('inspire', function () {
 
     // AccountAggregate::retrieve('A001')
     //     ->invoiceCreated('INV-005', '2026-05-01', 10000)
-    //     ->persist();    
+    //     ->persist();
 
 })->purpose('Display an inspiring quote');

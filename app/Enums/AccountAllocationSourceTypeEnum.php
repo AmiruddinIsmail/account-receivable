@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum AccountAllocationSourceTypeEnum : string
+enum AccountAllocationSourceTypeEnum: string
 {
     case PAYMENT = 'payment';
     case CREDIT_NOTE = 'credit-note';

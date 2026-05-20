@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Enums\AccountAllocationActionEnum;
-use App\Models\AccountInvoice;
 use App\Models\AccountAgingReport;
+use App\Models\AccountInvoice;
 use App\Models\AccountPaymentAllocation;
 use App\Models\AccountStatement;
 use Carbon\Carbon;
@@ -20,20 +20,23 @@ class GenerateAgingReports extends Command
     {
         if ($this->option('all')) {
             $this->processAllMonths();
+
             return;
         }
 
-        $targetMonth = $this->option('month') 
-            ? Carbon::createFromFormat('Y-m', $this->option('month')) 
+        $targetMonth = $this->option('month')
+            ? Carbon::createFromFormat('Y-m', $this->option('month'))
             : Carbon::now()->subMonth();
-            
+
         $this->generateForMonth($targetMonth);
     }
 
     protected function processAllMonths()
     {
         $firstEvent = AccountStatement::min('occurred_at');
-        if (!$firstEvent) return;
+        if (! $firstEvent) {
+            return;
+        }
 
         $start = Carbon::parse($firstEvent)->startOfMonth();
         $end = Carbon::parse('2024-01-01')->startOfMonth();
@@ -56,7 +59,7 @@ class GenerateAgingReports extends Command
             ->pluck('account_id');
 
         foreach ($accountIds as $accountId) {
-            
+
             if (AccountAgingReport::where('account_id', $accountId)->where('year_month', $yearMonth)->exists()) {
                 continue;
             }
@@ -72,13 +75,13 @@ class GenerateAgingReports extends Command
                 ->where('created_at', '<=', $endOfMonth->copy()->addDay()->startOfDay())
                 ->get()
                 ->groupBy('invoice_no');
-                       
+
             $buckets = [
                 'current' => 0,
                 '30' => 0,
                 '60' => 0,
                 '90' => 0,
-                '120' => 0
+                '120' => 0,
             ];
 
             foreach ($invoices as $invoice) {
@@ -92,21 +95,27 @@ class GenerateAgingReports extends Command
                     $paidBackThen += ($alloc->action === AccountAllocationActionEnum::REVERSE->value ? -$alloc->amount : $alloc->amount);
                 }
 
-                $outstanding = max(0, $invoiceTotalDebt - $paidBackThen);                
+                $outstanding = max(0, $invoiceTotalDebt - $paidBackThen);
 
                 if ($outstanding > 0) {
                     // Place into bucket based on invoice age relative to endOfMonth
                     $invoiceDate = Carbon::parse($invoice->occurred_at);
                     $diffInMonths = $invoiceDate->diffInMonths($endOfMonth);
 
-                    if ($diffInMonths == 0) $buckets['current'] += $outstanding;
-                    elseif ($diffInMonths <= 1) $buckets['30'] += $outstanding;
-                    elseif ($diffInMonths <= 2) $buckets['60'] += $outstanding;
-                    elseif ($diffInMonths <= 3) $buckets['90'] += $outstanding;
-                    else $buckets['120'] += $outstanding;
+                    if ($diffInMonths == 0) {
+                        $buckets['current'] += $outstanding;
+                    } elseif ($diffInMonths <= 1) {
+                        $buckets['30'] += $outstanding;
+                    } elseif ($diffInMonths <= 2) {
+                        $buckets['60'] += $outstanding;
+                    } elseif ($diffInMonths <= 3) {
+                        $buckets['90'] += $outstanding;
+                    } else {
+                        $buckets['120'] += $outstanding;
+                    }
                 }
             }
-                                
+
             AccountAgingReport::create([
                 'account_id' => $accountId,
                 'year_month' => $yearMonth,

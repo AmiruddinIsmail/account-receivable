@@ -14,5 +14,5 @@ class PaymentAllocated extends ShouldBeStored
         public string $component,
         public string $allocationId,
         public string $occurredAt,
-    ){}
+    ) {}
 }

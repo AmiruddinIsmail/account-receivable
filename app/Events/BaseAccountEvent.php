@@ -11,5 +11,5 @@ abstract class BaseAccountEvent extends ShouldBeStored
         public string $referenceNo,
         public int $amount,
         public string $occurredAt,
-    ){}
+    ) {}
 }

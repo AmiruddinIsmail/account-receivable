@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum AccountCommandTypeEnum : string
+enum AccountCommandTypeEnum: string
 {
     case INVOICE = 'Invoice';
     case LATE_CHARGE = 'Late Charge';

@@ -27,8 +27,8 @@ class DailySpiderTransactionProcessor extends Command
 
         $this->info('Spider transactions processed successfully from '.$startedAt.' to '.$endedAt);
 
-        Notification::route(MicrosoftTeamsChannel::class, null)->notify(new NotifyDailyTransactionCompleted());
-        
+        Notification::route(MicrosoftTeamsChannel::class, null)->notify(new NotifyDailyTransactionCompleted);
+
         return 0;
     }
 

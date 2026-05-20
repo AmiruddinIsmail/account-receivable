@@ -11,5 +11,5 @@ class OverpaymentRefunded extends ShouldBeStored
         public string $referenceNo,
         public string $paymentNo,
         public int $amount,
-    ){}
+    ) {}
 }

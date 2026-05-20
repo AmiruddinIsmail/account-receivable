@@ -114,7 +114,6 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
-
         'spider_mysql' => [
             'driver' => 'mysql',
             'url' => env('SPIDER_DB_URL'),
