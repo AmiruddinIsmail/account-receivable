@@ -8,4 +8,5 @@ enum AccountAllocationSourceTypeEnum: string
     case CREDIT_NOTE = 'credit-note';
     case OVERPAYMENT = 'overpayment';
     case PAYMENT_REVERSAL = 'payment-reversal';
+    case CREDIT_NOTE_REVERSAL = 'credit-note-reversal';
 }

@@ -19,8 +19,8 @@ class DailySpiderTransactionProcessor extends Command
      */
     public function handle()
     {
-        $endedAt = '2024-01-01'; // today();
-        $startedAt = '2023-01-01'; // today()->subDays(7);
+        $endedAt = today();
+        $startedAt = today()->subDays(7);
         $historical = $this->option('import-historical');
 
         (new ProcessTransactionToEvent)->handle($startedAt, $endedAt, $this->loggedResult(...), $historical);

@@ -39,7 +39,7 @@ class GenerateAgingReports extends Command
         }
 
         $start = Carbon::parse($firstEvent)->startOfMonth();
-        $end = Carbon::parse('2024-01-01')->startOfMonth();
+        $end = Carbon::now()->startOfMonth();
 
         while ($start < $end) {
             $this->generateForMonth($start->copy());

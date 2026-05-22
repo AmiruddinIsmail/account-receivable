@@ -7,7 +7,9 @@ use App\Enums\AccountAllocationSourceTypeEnum;
 use App\Enums\AccountCommandTypeEnum;
 use App\Enums\AccountInvoiceStatusEnum;
 use App\Events\Credits\CreditNoteAllocated;
+use App\Events\Credits\CreditNoteAllocationReversed;
 use App\Events\Credits\CreditNoteIssued;
+use App\Events\Credits\CreditNoteVoided;
 use App\Events\Invoices\InvoiceCreated;
 use App\Events\Invoices\LateChargeApplied;
 use App\Events\Payments\OverpaymentAllocated;
@@ -68,6 +70,8 @@ class AccountAggregate extends AggregateRoot
     protected array $allocationBalances = [];
 
     protected array $creditAllocationBalances = [];
+
+    protected array $voidedCreditNotes = [];
 
     protected PaymentAllocator $paymentAllocator;
 
@@ -261,6 +265,49 @@ class AccountAggregate extends AggregateRoot
 
         // STEP 2: REVERSE PAYMENT ALLOCATIONS (LIFO) // Include overpayment allocations as well
         $this->reversePaymentAllocations($referenceNo, $remaining, $occurredAt);
+
+        return $this;
+    }
+
+    public function voidCreditNote(string $referenceNo, string $occurredAt)
+    {
+        if (! isset($this->processedCreditNoteReferences[$referenceNo])) {
+            throw new Exception('Credit note not found');
+        }
+
+        if (isset($this->voidedCreditNotes[$referenceNo])) {
+            throw new Exception('Credit note already voided');
+        }
+        
+        $reversals = $this->creditNoteAllocator->reverse(
+            allocations: $this->allocations, 
+            allocationBalances: $this->creditAllocationBalances, 
+            referenceNo: $referenceNo,
+        );
+
+        foreach ($reversals as $reversal) {
+            $this->recordThat(new CreditNoteAllocationReversed(
+                accountId: $this->uuid(), 
+                allocationId: $reversal['allocationId'], 
+                referenceNo: $referenceNo, 
+                invoiceNo: $reversal['invoiceNo'], 
+                component: $reversal['component'], 
+                amount: $reversal['amount'], 
+                occurredAt: $occurredAt, 
+                id: (string) Str::uuid(),
+            ));
+        } 
+        
+        $remainingCredit = $this->availableCredits[$referenceNo]->remaining ?? 0;
+
+        if ($remainingCredit > 0) {
+            $this->recordThat(new CreditNoteVoided(
+                accountId: $this->uuid(), 
+                referenceNo: $referenceNo, 
+                amount: $remainingCredit, 
+                occurredAt: $occurredAt,
+            ));
+        }
 
         return $this;
     }
@@ -462,6 +509,58 @@ class AccountAggregate extends AggregateRoot
         $this->assertStateConsistency();
     }
 
+    public function applyCreditNoteAllocationReversed(CreditNoteAllocationReversed $event)
+    {
+        if (! isset($this->invoices[$event->invoiceNo])) {
+            throw new Exception("Invoice {$event->invoiceNo} not found");
+        }
+
+        $invoice = $this->invoices[$event->invoiceNo];
+
+        $this->invoices[$event->invoiceNo] = $invoice->reversePayment(component: $event->component, amount: $event->amount);
+
+        if (! isset($this->availableCredits[$event->referenceNo])) {
+            $this->availableCredits[$event->referenceNo] = CreditNoteState::create(
+                creditNoteNo: $event->referenceNo,
+                remaining: 0,
+                occurredAt: $event->occurredAt,
+            );
+        }
+        $credit = $this->availableCredits[$event->referenceNo];
+        $this->availableCredits[$event->referenceNo] = $credit->refund($event->amount);
+
+        $this->allocations[] = new AllocationLedgerEntry(
+            id: $event->id,
+            sequence: $this->nextAllocationSequence(),
+            occurredAt: $event->occurredAt,
+            sourceType: AccountAllocationSourceTypeEnum::CREDIT_NOTE_REVERSAL->value,
+            sourceNo: $event->referenceNo,
+            invoiceNo: $event->invoiceNo,
+            component: $event->component,
+            amount: $event->amount,
+            allocationId: $event->allocationId,
+        );
+
+        if (! isset($this->allocationBalances[$event->allocationId])) {
+            throw new Exception('Allocation balance not found');
+        }
+
+        $this->allocationBalances[$event->allocationId] -= $event->amount;
+        if ($this->allocationBalances[$event->allocationId] < 0) {
+            throw new Exception('Allocation balance became negative');
+        }
+
+        $this->assertStateConsistency();
+    }
+
+    public function applyCreditNoteVoided(CreditNoteVoided $event)
+    {
+        $this->voidedCreditNotes[$event->referenceNo] = true;
+        unset($this->availableCredits[$event->referenceNo]);
+        $this->assertStateConsistency();
+    }
+
+    /** helpers functions */
     protected function allocatePaymentToInvoices(string $paymentNo, int $amount, string $occurredAt)
     {
         $result = $this->paymentAllocator->allocate($this->invoices, $amount);
@@ -606,7 +705,7 @@ class AccountAggregate extends AggregateRoot
     /** development consistency check */
     protected function assertStateConsistency(): void
     {
-        if(app()->isProduction()){            
+        if (app()->isProduction()) {
             return;
         }
 
@@ -620,7 +719,7 @@ class AccountAggregate extends AggregateRoot
             } if ($invoice->lateChargePaid < 0) {
                 throw new Exception("Invoice late charge negative: {$invoice->invoiceNo}");
             }
-        } 
+        }
         foreach ($this->allocationBalances as $id => $balance) {
             if ($balance < 0) {
                 throw new Exception("Negative allocation balance: {$id}");

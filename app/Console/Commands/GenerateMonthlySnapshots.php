@@ -45,7 +45,7 @@ class GenerateMonthlySnapshots extends Command
         }
 
         $start = Carbon::parse($firstEvent)->startOfMonth();
-        $end = Carbon::parse('2024-01-01')->startOfMonth();
+        $end = today()->startOfMonth();
 
         while ($start < $end) {
             $this->generateForMonth($start->copy());
@@ -129,17 +129,17 @@ class GenerateMonthlySnapshots extends Command
                 ->where('year_month', '<', $yearMonth)
                 ->latest('year_month')
                 ->limit(3)
-                ->avg('billed_principal') ?: ($monthlyMetrics->billed_principal ?? 1);
+                ->avg('principal_billed_amt') ?: ($monthlyMetrics->billed_principal ?? 1);
 
             $miaScore = $principalBalance / max(1, $avgBilled);
 
             AccountMonthlySnapshot::create([
                 'account_id' => $accountId,
                 'year_month' => $yearMonth,
-                'opening_balance_amt' => $openingBalance,
-                'closing_balance_amt' => $closingBalance,
-                'principal_balance_amt' => $principalBalance,
-                'late_charge_balance_amt' => $lateChargeBalance,
+                'opening_balance_amt' => $openingBalance ?? 0,
+                'closing_balance_amt' => $closingBalance ?? 0,
+                'principal_balance_amt' => $principalBalance ?? 0,
+                'late_charge_balance_amt' => $lateChargeBalance ?? 0,
                 'principal_billed_amt' => (int) ($monthlyMetrics->billed_principal ?? 0),
                 'late_charge_billed_amt' => (int) ($monthlyMetrics->billed_late_charge ?? 0),
                 'payment_received_amt' => (int) ($monthlyMetrics->total_collected ?? 0),

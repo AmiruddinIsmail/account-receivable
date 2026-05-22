@@ -5,6 +5,7 @@ namespace App\Projectors;
 use App\Enums\AccountAllocationComponentEnum;
 use App\Enums\AccountInvoiceStatusEnum;
 use App\Events\Credits\CreditNoteAllocated;
+use App\Events\Credits\CreditNoteAllocationReversed;
 use App\Events\Invoices\InvoiceCreated;
 use App\Events\Invoices\LateChargeApplied;
 use App\Events\Payments\OverpaymentAllocated;
@@ -28,7 +29,7 @@ class InvoiceProjector extends Projector
             'principal_paid_amt' => 0,
             'late_charge_paid_amt' => 0,
             'principal_status' => AccountInvoiceStatusEnum::OPEN->value,
-            'late_charge_status' => AccountInvoiceStatusEnum::OPEN->value,
+            'late_charge_status' => AccountInvoiceStatusEnum::CLOSED->value,
             'status' => AccountInvoiceStatusEnum::OPEN->value,
             'type' => $event->type,
             'notes' => $event->notes ?? null,
@@ -48,6 +49,7 @@ class InvoiceProjector extends Projector
 
         $invoice->update([
             'late_charge_billed_amt' => $invoice->late_charge_billed_amt + $event->amount,
+            'late_charge_status' => AccountInvoiceStatusEnum::OPEN->value,
         ]);
     }
 
@@ -112,6 +114,25 @@ class InvoiceProjector extends Projector
     }
 
     public function onPaymentAllocationReversed(PaymentAllocationReversed $event)
+    {
+        $invoice = AccountInvoice::query()
+            ->where('account_id', $event->accountId)
+            ->where('reference_no', $event->invoiceNo)
+            ->first();
+
+        if (! $invoice) {
+            return;
+        }
+
+        if ($event->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
+            $invoice->subPrincipalPaid($event->amount);
+        }
+        if ($event->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
+            $invoice->subLateChargePaid($event->amount);
+        }
+    }
+
+    public function onCreditNoteAllocationReversed(CreditNoteAllocationReversed $event)
     {
         $invoice = AccountInvoice::query()
             ->where('account_id', $event->accountId)

@@ -1,10 +1,7 @@
 <?php
 
-use App\Aggregates\AccountAggregate;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
-
-// Schedule::command('app:daily-spider-transaction-processor')->daily();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -14,7 +11,7 @@ Artisan::command('inspire', function () {
     //     ->persist();
 
     // AccountAggregate::retrieve('A001')
-    //     ->paymentReceived('PAY-001', '2026-01-02', 14000)
+    //     ->creditNoteIssued('CN-001', '2026-01-02', 14000)
     //     ->persist();
 
     // // AccountAggregate::retrieve('A001')
@@ -23,6 +20,10 @@ Artisan::command('inspire', function () {
 
     // AccountAggregate::retrieve('A001')
     //     ->invoiceCreated('INV-002', '2026-02-01', 10000)
+    //     ->persist();
+
+    // AccountAggregate::retrieve('A001')
+    //     ->voidCreditNote('CN-001', '2026-02-02')
     //     ->persist();
 
     // AccountAggregate::retrieve('A001')

@@ -9,4 +9,6 @@ enum AccountCommandTypeEnum: string
     case PAYMENT = 'Payment';
     case CREDIT_NOTE = 'Credit Note';
     case REFUND = 'Refund';
+    case CREDIT_NOTE_VOIDED = 'Credit Note Voided';
+
 }

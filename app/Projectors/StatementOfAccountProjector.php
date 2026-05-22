@@ -4,6 +4,7 @@ namespace App\Projectors;
 
 use App\Enums\AccountCommandTypeEnum;
 use App\Events\Credits\CreditNoteIssued;
+use App\Events\Credits\CreditNoteVoided;
 use App\Events\Invoices\InvoiceCreated;
 use App\Events\Invoices\LateChargeApplied;
 use App\Events\Payments\PaymentReceived;
@@ -76,6 +77,19 @@ class StatementOfAccountProjector extends Projector
             debit: $event->amount,
             credit: 0,
             description: 'Refund issued to customer',
+        );
+    }
+
+    public function onCreditNoteVoided(CreditNoteVoided $event)
+    {
+        $this->recordTransaction(
+            accountId: $event->accountId,
+            referenceNo: $event->referenceNo,
+            type: AccountCommandTypeEnum::CREDIT_NOTE_VOIDED->value,
+            occurredAt: $event->occurredAt,
+            debit: $event->amount,
+            credit: 0,
+            description: 'Credit note is voided',
         );
     }
 

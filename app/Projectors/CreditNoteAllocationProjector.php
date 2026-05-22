@@ -4,6 +4,7 @@ namespace App\Projectors;
 
 use App\Enums\AccountAllocationActionEnum;
 use App\Events\Credits\CreditNoteAllocated;
+use App\Events\Credits\CreditNoteAllocationReversed;
 use App\Models\AccountCreditAllocation;
 use Illuminate\Support\Carbon;
 use Spatie\EventSourcing\EventHandlers\Projectors\Projector;
@@ -19,6 +20,19 @@ class CreditNoteAllocationProjector extends Projector
             'component' => $event->component,
             'amount' => $event->amount,
             'action' => AccountAllocationActionEnum::ALLOCATE->value,
+            'created_at' => $event->occurredAt ? Carbon::createFromFormat('Y-m-d', $event->occurredAt) : now(),
+        ]);
+    }
+
+    public function onCreditNoteAllocationReversed(CreditNoteAllocationReversed $event)
+    {
+        AccountCreditAllocation::create([
+            'account_id' => $event->accountId,
+            'reference_no' => $event->referenceNo,
+            'invoice_no' => $event->invoiceNo,
+            'component' => $event->component,
+            'amount' => $event->amount,
+            'action' => AccountAllocationActionEnum::REVERSE->value,
             'created_at' => $event->occurredAt ? Carbon::createFromFormat('Y-m-d', $event->occurredAt) : now(),
         ]);
     }
