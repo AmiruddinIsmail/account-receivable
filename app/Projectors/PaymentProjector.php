@@ -13,9 +13,10 @@ class PaymentProjector extends Projector
         AccountPayment::create([
             'account_id' => $event->accountId,
             'reference_no' => $event->referenceNo,
-            'occured_at' => $event->occuredAt,
+            'occurred_at' => $event->occurredAt,
             'amount' => $event->amount,
             'notes' => $event->notes ?? null,
+            'tenure' => $event->tenure,
         ]);
     }
 }

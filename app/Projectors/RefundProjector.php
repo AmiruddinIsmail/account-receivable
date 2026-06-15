@@ -13,8 +13,9 @@ class RefundProjector extends Projector
         AccountRefund::create([
             'account_id' => $event->accountId,
             'reference_no' => $event->referenceNo,
-            'occured_at' => $event->occuredAt,
+            'occurred_at' => $event->occurredAt,
             'amount' => $event->amount,
+            'tenure' => $event->tenure,
         ]);
     }
 }

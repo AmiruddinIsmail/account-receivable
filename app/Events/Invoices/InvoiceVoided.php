@@ -15,9 +15,8 @@ class InvoiceVoided extends BaseAccountEvent
         string $accountId,
         string $referenceNo,
         int $amount,
-        string $occuredAt,
+        string $occurredAt,
     ) {
-        parent::__construct($accountId, $referenceNo, $amount, $occuredAt);
+        parent::__construct($accountId, $referenceNo, $amount, $occurredAt);
     }
-
 }

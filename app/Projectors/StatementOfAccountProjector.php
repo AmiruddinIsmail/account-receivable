@@ -4,6 +4,7 @@ namespace App\Projectors;
 
 use App\Enums\AccountCommandTypeEnum;
 use App\Events\Credits\CreditNoteIssued;
+use App\Events\Credits\CreditNoteVoided;
 use App\Events\Invoices\InvoiceCreated;
 use App\Events\Invoices\LateChargeApplied;
 use App\Events\Payments\PaymentReceived;
@@ -18,11 +19,12 @@ class StatementOfAccountProjector extends Projector
         $this->recordTransaction(
             accountId: $event->accountId,
             referenceNo: $event->referenceNo,
-            type: ucfirst($event->type),
-            occuredAt: $event->occuredAt,
+            type: AccountCommandTypeEnum::INVOICE->value,
+            occurredAt: $event->occurredAt,
             debit: $event->amount,
             credit: 0,
-            description: ($event->type == AccountCommandTypeEnum::INVOICE->value) ? 'Monthly Charge ' : 'Other Charge',
+            description: 'Monthly Charge ',
+            tenure: $event->tenure,
         );
     }
 
@@ -32,7 +34,7 @@ class StatementOfAccountProjector extends Projector
             accountId: $event->accountId,
             referenceNo: $event->referenceNo,
             type: AccountCommandTypeEnum::LATE_CHARGE->value,
-            occuredAt: $event->occuredAt,
+            occurredAt: $event->occurredAt,
             debit: $event->amount,
             credit: 0,
             description: "Late Charge for {$event->invoiceNo}",
@@ -45,10 +47,11 @@ class StatementOfAccountProjector extends Projector
             accountId: $event->accountId,
             referenceNo: $event->referenceNo,
             type: AccountCommandTypeEnum::PAYMENT->value,
-            occuredAt: $event->occuredAt,
+            occurredAt: $event->occurredAt,
             debit: 0,
             credit: $event->amount,
             description: 'Customer Payment',
+            tenure: $event->tenure,
         );
     }
 
@@ -58,10 +61,11 @@ class StatementOfAccountProjector extends Projector
             accountId: $event->accountId,
             referenceNo: $event->referenceNo,
             type: AccountCommandTypeEnum::CREDIT_NOTE->value,
-            occuredAt: $event->occuredAt,
+            occurredAt: $event->occurredAt,
             debit: 0,
             credit: $event->amount,
             description: $event->invoiceNo ? "Credit Note for {$event->invoiceNo}" : 'Credit Note issued',
+            tenure: $event->tenure,
         );
     }
 
@@ -72,10 +76,24 @@ class StatementOfAccountProjector extends Projector
             accountId: $event->accountId,
             referenceNo: $event->referenceNo,
             type: AccountCommandTypeEnum::REFUND->value,
-            occuredAt: $event->occuredAt,
+            occurredAt: $event->occurredAt,
             debit: $event->amount,
             credit: 0,
             description: 'Refund issued to customer',
+            tenure: $event->tenure,
+        );
+    }
+
+    public function onCreditNoteVoided(CreditNoteVoided $event)
+    {
+        $this->recordTransaction(
+            accountId: $event->accountId,
+            referenceNo: $event->referenceNo,
+            type: AccountCommandTypeEnum::CREDIT_NOTE_VOIDED->value,
+            occurredAt: $event->occurredAt,
+            debit: $event->amount,
+            credit: 0,
+            description: 'Credit note is voided',
         );
     }
 
@@ -83,13 +101,14 @@ class StatementOfAccountProjector extends Projector
         string $accountId,
         string $referenceNo,
         string $type,
-        string $occuredAt,
+        string $occurredAt,
         int $debit,
         int $credit,
-        string $description
+        string $description,
+        ?int $tenure = null,
     ) {
         $balanceImpact = $debit - $credit;
-        
+
         $latestStatement = AccountStatement::where('account_id', $accountId)
             ->latest('id')
             ->first();
@@ -97,7 +116,7 @@ class StatementOfAccountProjector extends Projector
         $currentBalance = $latestStatement ? $latestStatement->running_balance : 0;
         $newBalance = $currentBalance + $balanceImpact;
 
-        if($type === AccountCommandTypeEnum::INVOICE->value) {
+        if ($type === AccountCommandTypeEnum::INVOICE->value) {
             $invoiceCount = AccountStatement::query()
                 ->where('account_id', $accountId)
                 ->where('type', AccountCommandTypeEnum::INVOICE->value)
@@ -105,16 +124,21 @@ class StatementOfAccountProjector extends Projector
             $description .= ($invoiceCount + 1);
         }
 
+        if ($tenure === null && $latestStatement != null) {
+            $tenure = $latestStatement->tenure;
+        }
+
         AccountStatement::create([
             'account_id' => $accountId,
             'reference_no' => $referenceNo,
             'type' => $type,
-            'occured_at' => $occuredAt,
+            'occurred_at' => $occurredAt,
             'debit_amt' => $debit,
             'credit_amt' => $credit,
             'balance_impact' => $balanceImpact,
             'running_balance' => $newBalance,
             'description' => $description,
+            'tenure' => $tenure,
         ]);
     }
 }

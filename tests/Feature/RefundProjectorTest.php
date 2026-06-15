@@ -14,21 +14,21 @@ it('projects refund events into the account_refunds table', function () {
     // 1. Create Invoice
     $aggregate->invoiceCreated(
         referenceNo: 'INV-001',
-        occuredAt: '2024-01-01',
+        occurredAt: '2024-01-01',
         amount: 1000
     )->persist();
 
     // 2. Receive Payment
     $aggregate->paymentReceived(
         referenceNo: 'PAY-001',
-        occuredAt: '2024-01-05',
+        occurredAt: '2024-01-05',
         amount: 1000
     )->persist();
 
     // 3. Issue Refund
     $aggregate->refundIssued(
         referenceNo: 'REF-001',
-        occuredAt: '2024-01-20',
+        occurredAt: '2024-01-20',
         amount: 250
     )->persist();
 

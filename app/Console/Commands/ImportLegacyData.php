@@ -41,45 +41,40 @@ class ImportLegacyData extends Command
         $aggregates = [];
         $batchCount = 0;
 
-        // $handlers = Projectionist::allEventHandlers()->toArray();
-        // Projectionist::withoutEventHandlers();
+        Projectionist::withoutEventHandlers();
 
-        try {
-            foreach ($files as $file) {
-                $this->line("Processing file: {$file->getFilename()}");
+        foreach ($files as $file) {
+            $this->line("Processing file: {$file->getFilename()}");
 
-                $rows = $this->getCsvRows($file->getPathname());
+            $rows = $this->getCsvRows($file->getPathname());
 
-                $bar = $this->output->createProgressBar();
-                $bar->start();
+            $bar = $this->output->createProgressBar();
+            $bar->start();
 
-                foreach ($rows as $row) {
-                    try {
-                        $this->processRow($row, $aggregates);
-                        $batchCount++;
-                        $totalRows++;
-                        $bar->advance();
+            foreach ($rows as $row) {
+                try {
+                    $this->processRow($row, $aggregates);
+                    $batchCount++;
+                    $totalRows++;
+                    $bar->advance();
 
-                        if ($batchCount >= $batchSize) {
-                            $this->persistAggregates($aggregates);
-                            $aggregates = [];
-                            $batchCount = 0;
-                        }
-                    } catch (\Exception $e) {
-                        $this->error("\nError processing row ".json_encode($row).': '.$e->getMessage());
+                    if ($batchCount >= $batchSize) {
+                        $this->persistAggregates($aggregates);
+                        $aggregates = [];
+                        $batchCount = 0;
                     }
+                } catch (\Exception $e) {
+                    $this->error("\nError processing row ".json_encode($row).': '.$e->getMessage());
                 }
-
-                // Persist remaining at end of file
-                $this->persistAggregates($aggregates);
-                $aggregates = [];
-                $batchCount = 0;
-
-                $bar->finish();
-                $this->line('');
             }
-        } finally {
-            // Projectionist::addEventHandlers($handlers);
+
+            // Persist remaining at end of file
+            $this->persistAggregates($aggregates);
+            $aggregates = [];
+            $batchCount = 0;
+
+            $bar->finish();
+            $this->line('');
         }
 
         $this->info("Import completed! Total rows processed: {$totalRows}");

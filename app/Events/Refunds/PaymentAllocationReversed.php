@@ -15,6 +15,6 @@ class PaymentAllocationReversed extends ShouldBeStored
         public int $amount,
         public string $component,
         public string $id,
-        public string $occuredAt,
-    ){}
+        public string $occurredAt,
+    ) {}
 }

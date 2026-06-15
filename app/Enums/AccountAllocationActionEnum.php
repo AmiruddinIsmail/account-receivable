@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum AccountAllocationActionEnum : string
+enum AccountAllocationActionEnum: string
 {
     case ALLOCATE = 'allocate';
     case REVERSE = 'reverse';

@@ -10,6 +10,6 @@ abstract class BaseAccountEvent extends ShouldBeStored
         public string $accountId,
         public string $referenceNo,
         public int $amount,
-        public string $occuredAt,
-    ){}
+        public string $occurredAt,
+    ) {}
 }

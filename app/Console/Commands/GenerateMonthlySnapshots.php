@@ -5,10 +5,12 @@ namespace App\Console\Commands;
 use App\Enums\AccountAllocationActionEnum;
 use App\Enums\AccountAllocationComponentEnum;
 use App\Enums\AccountCommandTypeEnum;
+use App\Models\AccountCreditAllocation;
 use App\Models\AccountInvoice;
 use App\Models\AccountMonthlySnapshot;
 use App\Models\AccountPaymentAllocation;
 use App\Models\AccountStatement;
+use App\Models\AccountStatistics;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 
@@ -22,35 +24,37 @@ class GenerateMonthlySnapshots extends Command
     {
         if ($this->option('all')) {
             $this->processAllMonths();
+
             return;
         }
 
-        $targetMonth = $this->option('month') 
-            ? Carbon::createFromFormat('Y-m', $this->option('month')) 
+        $targetMonth = $this->option('month')
+            ? Carbon::createFromFormat('Y-m', $this->option('month'))
             : Carbon::now()->subMonth();
-            
+
         $this->generateForMonth($targetMonth);
     }
 
     protected function processAllMonths()
     {
         // Find the earliest event date to start from
-        $firstEvent = AccountStatement::min('occured_at');
-        
-        if (!$firstEvent) {
-            $this->error("No account activity found in Statement of Account.");
+        $firstEvent = AccountStatement::min('occurred_at');
+
+        if (! $firstEvent) {
+            $this->error('No account activity found in Statement of Account.');
+
             return;
         }
 
         $start = Carbon::parse($firstEvent)->startOfMonth();
-        $end = Carbon::parse('2024-01-01')->startOfMonth();
+        $end = Carbon::parse('2026-04-30')->startOfMonth(); // today()->startOfMonth();
 
         while ($start < $end) {
             $this->generateForMonth($start->copy());
             $start->addMonth();
         }
 
-        $this->info("All historic months processed.");
+        $this->info('All historic months processed.');
     }
 
     protected function generateForMonth(Carbon $targetMonth)
@@ -62,7 +66,7 @@ class GenerateMonthlySnapshots extends Command
         $this->info("Generating point-in-time snapshots for {$yearMonth}...");
 
         // Get all impact accounts up to this point in time
-        $accountIds = AccountStatement::where('occured_at', '<=', $endOfMonth->toDateString())
+        $accountIds = AccountStatement::where('occurred_at', '<=', $endOfMonth->toDateString())
             ->distinct()
             ->pluck('account_id');
 
@@ -70,19 +74,22 @@ class GenerateMonthlySnapshots extends Command
             // Immutability Check
             if (AccountMonthlySnapshot::where('account_id', $accountId)->where('year_month', $yearMonth)->exists()) {
                 $this->warn("Account {$accountId} already has a record for {$yearMonth}. Skipping.");
+
                 continue;
             }
 
             // 1. Get Opening Balance (Historical Closing of previous month)
             $previousMonthStr = $targetMonth->copy()->subMonth()->format('Y-m');
-            $prevSnapshot = AccountMonthlySnapshot::where('account_id', $accountId)
+            $prevSnapshot = AccountMonthlySnapshot::query()
+                ->where('account_id', $accountId)
                 ->where('year_month', $previousMonthStr)
                 ->first();
-            $openingBalance = $prevSnapshot ? $prevSnapshot->closing_balance : 0;
+
+            $openingBalance = $prevSnapshot !== null ? $prevSnapshot->closing_balance_amt : 0;
 
             // 2. Metrics for this specific month from Statement (Raw activity)
             $monthlyMetrics = AccountStatement::where('account_id', $accountId)
-                ->whereBetween('occured_at', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+                ->whereBetween('occurred_at', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
                 ->selectRaw('
                     SUM(CASE WHEN type = "'.AccountCommandTypeEnum::INVOICE->value.'" THEN debit_amt ELSE 0 END) as billed_principal,
                     SUM(CASE WHEN type = "'.AccountCommandTypeEnum::LATE_CHARGE->value.'" THEN debit_amt ELSE 0 END) as billed_late_charge,
@@ -91,10 +98,10 @@ class GenerateMonthlySnapshots extends Command
 
             // 3. POINT-IN-TIME BALANCE RECONSTRUCTION
             // Logic: Total Debt Created <= EOM minus Total Allocations <= EOM
-            
+
             // Total Debt Created up to EOM
             $totalDebt = AccountInvoice::where('account_id', $accountId)
-                ->where('occured_at', '<=', $endOfMonth->toDateString())
+                ->where('occurred_at', '<=', $endOfMonth->toDateString())
                 ->selectRaw('SUM(principal_billed_amt) as p_total, SUM(late_charge_billed_amt) as l_total')
                 ->first();
 
@@ -103,43 +110,155 @@ class GenerateMonthlySnapshots extends Command
             $historicalPaid = AccountPaymentAllocation::where('account_id', $accountId)
                 ->where('created_at', '<=', $endOfMonth->copy()->addDay()->startOfDay()) // Use creation date for allocation timing
                 ->get();
-            
+
+            $historicalCredits = AccountCreditAllocation::query()
+                ->where('account_id', $accountId)
+                ->where('created_at', '<=', $endOfMonth->copy()->addDay()->startOfDay()) // Use creation date for allocation timing
+                ->get();
+
             $pPaid = 0;
             $lPaid = 0;
 
             foreach ($historicalPaid as $alloc) {
                 $impact = ($alloc->action === AccountAllocationActionEnum::REVERSE->value) ? -$alloc->amount : $alloc->amount;
-                if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) $pPaid += $impact;
-                if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) $lPaid += $impact;
+                if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
+                    $pPaid += $impact;
+                }
+                if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
+                    $lPaid += $impact;
+                }
             }
 
-            $principalBalance = max(0, ($totalDebt->p_total ?? 0) - $pPaid);
-            $lateChargeBalance = max(0, ($totalDebt->l_total ?? 0) - $lPaid);
+            $pCredit = 0;
+            $lCredit = 0;
+
+            foreach ($historicalCredits as $alloc) {
+                $impact = ($alloc->action === AccountAllocationActionEnum::REVERSE->value) ? -$alloc->amount : $alloc->amount;
+                if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
+                    $pCredit += $impact;
+                }
+                if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
+                    $lCredit += $impact;
+                }
+            }
+
+            $principalBalance = max(0, ($totalDebt->p_total ?? 0) - $pPaid - $pCredit);
+            $lateChargeBalance = max(0, ($totalDebt->l_total ?? 0) - $lPaid - $lCredit);
             $closingBalance = $principalBalance + $lateChargeBalance;
 
             // 4. MIA Score Calculation based on historical billed principal
-            $avgBilled = AccountMonthlySnapshot::where('account_id', $accountId)
-                ->where('year_month', '<', $yearMonth)
-                ->latest('year_month')
-                ->limit(3)
-                ->avg('billed_principal') ?: ($monthlyMetrics->billed_principal ?? 1);
+            $accountStat = AccountStatistics::query()
+                ->where('account_id', $accountId)
+                ->first();
+            if ($accountStat === null) {
+                continue;
+            }
 
+            $avgBilled = $accountStat->subscription_amt;
             $miaScore = $principalBalance / max(1, $avgBilled);
+
+            /** allocation for selected month */
+            $paymentAllocationsForMonth = $this->sumOfPaymentAllocations($startOfMonth, $endOfMonth, $accountId);
+            $creditAllocationsForMonth = $this->sumOfCreditAllocations($startOfMonth, $endOfMonth, $accountId);
+
+            $oldestUnpaidInvoice = $this->calculateOldestOpenInvoice($endOfMonth, $accountId, $principalBalance);
+
+            $dbd = $oldestUnpaidInvoice !== null
+                ? $oldestUnpaidInvoice->diffInDays($endOfMonth)
+                : 0;
 
             AccountMonthlySnapshot::create([
                 'account_id' => $accountId,
                 'year_month' => $yearMonth,
-                'opening_balance_amt' => $openingBalance,
-                'closing_balance_amt' => $closingBalance,
-                'principal_balance_amt' => $principalBalance,
-                'late_charge_balance_amt' => $lateChargeBalance,
+                'tenure' => $accountStat->tenure,
+                'opening_balance_amt' => $openingBalance ?? 0,
+                'closing_balance_amt' => $closingBalance ?? 0,
+                'principal_balance_amt' => $principalBalance ?? 0,
+                'late_charge_balance_amt' => $lateChargeBalance ?? 0,
                 'principal_billed_amt' => (int) ($monthlyMetrics->billed_principal ?? 0),
                 'late_charge_billed_amt' => (int) ($monthlyMetrics->billed_late_charge ?? 0),
                 'payment_received_amt' => (int) ($monthlyMetrics->total_collected ?? 0),
+                'principal_allocation_amt' => $paymentAllocationsForMonth[0],
+                'late_charge_allocation_amt' => $paymentAllocationsForMonth[1],
+                'credit_principal_allocation_amt' => $creditAllocationsForMonth[0],
+                'credit_late_charge_allocation_amt' => $creditAllocationsForMonth[1],
                 'mia_score' => ceil($miaScore),
+                'dbd' => $dbd,
+                'oldest_overdue_invoice_date' => $oldestUnpaidInvoice ?? null,
             ]);
-
-            // $this->line("Processed: {$accountId}");
         }
+    }
+
+    private function sumOfPaymentAllocations(Carbon $startOfMonth, Carbon $endOfMonth, string $accountId)
+    {
+        $historicalPaid = AccountPaymentAllocation::query()
+            ->where('account_id', $accountId)
+            ->whereDate('created_at', '>=', $startOfMonth)
+            ->whereDate('created_at', '<=', $endOfMonth)
+            ->get();
+
+        $pPaid = 0;
+        $lPaid = 0;
+
+        foreach ($historicalPaid as $alloc) {
+            $impact = ($alloc->action === AccountAllocationActionEnum::REVERSE->value) ? -$alloc->amount : $alloc->amount;
+            if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
+                $pPaid += $impact;
+            }
+            if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
+                $lPaid += $impact;
+            }
+        }
+
+        return [$pPaid, $lPaid];
+    }
+
+    private function sumOfCreditAllocations(Carbon $startOfMonth, Carbon $endOfMonth, string $accountId)
+    {
+        $historicalCredits = AccountCreditAllocation::query()
+            ->where('account_id', $accountId)
+            ->whereDate('created_at', '>=', $startOfMonth)
+            ->whereDate('created_at', '<=', $endOfMonth)
+            ->get();
+
+        $pPaid = 0;
+        $lPaid = 0;
+
+        foreach ($historicalCredits as $alloc) {
+            $impact = ($alloc->action === AccountAllocationActionEnum::REVERSE->value) ? -$alloc->amount : $alloc->amount;
+            if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
+                $pPaid += $impact;
+            }
+            if ($alloc->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
+                $lPaid += $impact;
+            }
+        }
+
+        return [$pPaid, $lPaid];
+    }
+
+    private function calculateOldestOpenInvoice($endOfMonth, $accountId, $closingBalance)
+    {
+        $invoices = AccountInvoice::query()
+            ->where('account_id', $accountId)
+            ->where('occurred_at', '<=', $endOfMonth)
+            ->orderBy('occurred_at')
+            ->get();
+
+        $remaining = $closingBalance;
+        if ($remaining <= 0) {
+            return null;
+        }
+
+        foreach ($invoices->reverse() as $invoice) {
+
+            $remaining -= $invoice->principal_billed_amt;
+
+            if ($remaining <= 0) {
+                return $invoice->occurred_at;
+            }
+        }
+
+        return null;
     }
 }

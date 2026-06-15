@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum AccountInvoiceStatusEnum : string
+enum AccountInvoiceStatusEnum: string
 {
     case OPEN = 'open';
     case CLOSED = 'closed';

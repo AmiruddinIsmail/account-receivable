@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('account_id')->index();
             $table->string('year_month')->index();
+            $table->integer('tenure')->nullable()->index();
             $table->integer('bucket_current')->default(0);
             $table->integer('bucket_30_days')->default(0); // 1 Month
             $table->integer('bucket_60_days')->default(0); // 2 Months
