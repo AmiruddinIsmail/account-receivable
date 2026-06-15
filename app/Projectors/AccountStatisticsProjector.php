@@ -28,6 +28,8 @@ class AccountStatisticsProjector extends Projector
     {
         $stats = $this->getStats($event->accountId);
 
+        $stats->tenure = $event->tenure;
+        $stats->subscription_amt = $event->subscriptionAmt;
         $stats->invoices_count++;
         $stats->billed_principal_amt += $event->amount;
         $stats->remaining_balance_amt += $event->amount;

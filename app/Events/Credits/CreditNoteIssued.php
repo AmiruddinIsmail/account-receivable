@@ -12,5 +12,6 @@ class CreditNoteIssued extends ShouldBeStored
         public int $amount,
         public string $occurredAt,
         public ?string $invoiceNo = null,
+        public ?int $tenure = null,
     ) {}
 }

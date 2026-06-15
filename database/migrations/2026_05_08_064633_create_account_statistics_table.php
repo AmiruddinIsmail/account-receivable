@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('account_statistics', function (Blueprint $table) {
             $table->string('account_id')->primary();
+            $table->integer('tenure')->nullable()->index();
+            $table->integer('subscription_amt')->nullable();
 
             // Counts
             $table->integer('invoices_count')->default(0);

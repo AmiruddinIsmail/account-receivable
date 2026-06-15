@@ -31,13 +31,15 @@ final class PaymentAllocator
             }
 
             $pay = min($balance, $remaining);
-            $allocations[] = [
-                'invoiceNo' => $invoice->invoiceNo,
-                'component' => AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value,
-                'amount' => $pay,
-            ];
+            if ($pay > 0) {
+                $allocations[] = [
+                    'invoiceNo' => $invoice->invoiceNo,
+                    'component' => AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value,
+                    'amount' => $pay,
+                ];
 
-            $remaining -= $pay;
+                $remaining -= $pay;
+            }
         }
 
         /* PASS 2 - LATE CHARGE */
@@ -54,13 +56,15 @@ final class PaymentAllocator
             }
 
             $pay = min($balance, $remaining);
-            $allocations[] = [
-                'invoiceNo' => $invoice->invoiceNo,
-                'component' => AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value,
-                'amount' => $pay,
-            ];
+            if ($pay > 0) {
+                $allocations[] = [
+                    'invoiceNo' => $invoice->invoiceNo,
+                    'component' => AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value,
+                    'amount' => $pay,
+                ];
 
-            $remaining -= $pay;
+                $remaining -= $pay;
+            }
         }
 
         return [

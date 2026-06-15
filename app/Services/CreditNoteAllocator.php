@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Enums\AccountAllocationComponentEnum;
 use App\Enums\AccountAllocationSourceTypeEnum;
 use App\States\AllocationLedgerEntry;
+use App\States\InvoiceState;
 
 final class CreditNoteAllocator
 {
@@ -26,14 +28,16 @@ final class CreditNoteAllocator
 
             $apply = min($remaining, $credit->remaining);
 
-            $allocations[] = [
-                'sourceNo' => $credit->creditNoteNo,
-                'invoiceNo' => $invoiceNo,
-                'component' => $component,
-                'amount' => $apply,
-            ];
+            if ($apply > 0) {
+                $allocations[] = [
+                    'sourceNo' => $credit->creditNoteNo,
+                    'invoiceNo' => $invoiceNo,
+                    'component' => $component,
+                    'amount' => $apply,
+                ];
 
-            $remaining -= $apply;
+                $remaining -= $apply;
+            }
         }
 
         return [
@@ -69,5 +73,51 @@ final class CreditNoteAllocator
         }
 
         return $reversals;
+    }
+
+    public function allocateAll(iterable $invoices, int $amount): array
+    {
+        $remaining = $amount;
+        $allocations = [];
+        $sorted = collect($invoices)
+            ->filter(fn (InvoiceState $x) => ! $x->isClosed())
+            ->sortBy([
+                ['occurredAt', 'asc'],
+                ['invoiceNo', 'asc'],
+            ]);
+
+        foreach ($sorted as $invoice) {
+
+            if ($remaining <= 0) {
+                break;
+            }
+
+            $toPayPrincipal = min($invoice->principalBalance(), $remaining);
+            if ($toPayPrincipal > 0) {
+                $allocations[] = [
+                    'invoiceNo' => $invoice->invoiceNo,
+                    'component' => AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value,
+                    'amount' => $toPayPrincipal,
+                ];
+
+                $remaining -= $toPayPrincipal;
+            }
+
+            $toPayLateCharge = min($invoice->lateChargeBalance(), $remaining);
+            if ($toPayLateCharge > 0) {
+                $allocations[] = [
+                    'invoiceNo' => $invoice->invoiceNo,
+                    'component' => AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value,
+                    'amount' => $toPayLateCharge,
+                ];
+
+                $remaining -= $toPayLateCharge;
+            }
+        }
+
+        return [
+            'allocations' => $allocations,
+            'remaining' => $remaining,
+        ];
     }
 }

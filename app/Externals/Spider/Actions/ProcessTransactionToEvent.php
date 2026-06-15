@@ -3,6 +3,7 @@
 namespace App\Externals\Spider\Actions;
 
 use App\Aggregates\AccountAggregate;
+use App\Enums\AccountCommandTypeEnum;
 use App\Externals\Spider\Repositories\TransactionRepository;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -63,6 +64,8 @@ class ProcessTransactionToEvent
         $referenceNo = $row->reference_no ?? null;
         $amount = $row->amount ?? 0;
         $amountCents = (int) round(((float) $amount) * 100);
+        $tenure = $row->tenure ?? null;
+        $subscriptionAmt = (int) round(((float) $row->subscription_amt) * 100);
 
         if (! isset($aggregates[$mandate])) {
             $aggregates[$mandate] = AccountAggregate::retrieve($mandate);
@@ -72,20 +75,47 @@ class ProcessTransactionToEvent
 
         switch ($type) {
             case 'invoice':
-                $aggregate->invoiceCreated($referenceNo, $date, $amountCents);
+                $aggregate->invoiceCreated(
+                    referenceNo: $referenceNo,
+                    occurredAt: $date,
+                    amount: $amountCents,
+                    type: ($amountCents === $subscriptionAmt || $amountCents === ($subscriptionAmt + 10000)) ? AccountCommandTypeEnum::INVOICE->value : 'Others',
+                    tenure: $tenure,
+                    subscriptionAmt: $subscriptionAmt,
+                );
                 break;
             case 'payment':
-                $aggregate->paymentReceived($referenceNo, $date, $amountCents);
+                $aggregate->paymentReceived(
+                    referenceNo: $referenceNo,
+                    occurredAt: $date,
+                    amount: $amountCents,
+                    tenure: $tenure,
+                );
                 break;
             case 'lpc':
                 $invoiceNo = str_replace('LATE-', '', $referenceNo);
-                $aggregate->lateChargeApplied($referenceNo, $date, $amountCents, $invoiceNo);
+                $aggregate->lateChargeApplied(
+                    referenceNo: $referenceNo,
+                    occurredAt: $date,
+                    amount: $amountCents,
+                    invoiceNo: $invoiceNo,
+                );
                 break;
             case 'cn':
-                $aggregate->creditNoteIssued($referenceNo, $date, $amountCents);
+                $aggregate->creditNoteIssued(
+                    referenceNo: $referenceNo,
+                    occurredAt: $date,
+                    amount: $amountCents,
+                    tenure: $tenure,
+                );
                 break;
             case 'refund':
-                $aggregate->refundIssued($referenceNo, $date, $amountCents);
+                $aggregate->refundIssued(
+                    referenceNo: $referenceNo,
+                    occurredAt: $date,
+                    amount: $amountCents,
+                    tenure: $tenure,
+                );
                 break;
             default:
                 break;

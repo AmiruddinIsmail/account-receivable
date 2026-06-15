@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('account_refunds', function (Blueprint $table) {
             $table->id();
             $table->string('account_id')->index();
+            $table->integer('tenure')->nullable()->index();
             $table->string('reference_no')->index();
             $table->date('occurred_at');
             $table->integer('amount');

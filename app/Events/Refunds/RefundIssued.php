@@ -11,5 +11,6 @@ class RefundIssued extends ShouldBeStored
         public string $referenceNo,
         public int $amount,
         public string $occurredAt,
+        public ?int $tenure = null,
     ) {}
 }

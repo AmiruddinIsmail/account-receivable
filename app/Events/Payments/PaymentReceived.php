@@ -16,6 +16,7 @@ class PaymentReceived extends BaseAccountEvent
         string $referenceNo,
         int $amount,
         string $occurredAt,
+        public ?int $tenure = null,
     ) {
         parent::__construct($accountId, $referenceNo, $amount, $occurredAt);
     }

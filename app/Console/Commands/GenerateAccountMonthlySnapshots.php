@@ -14,31 +14,27 @@ use App\Models\AccountStatistics;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 
-class GenerateMonthlySnapshots extends Command
+class GenerateAccountMonthlySnapshots extends Command
 {
-    protected $signature = 'account:generate-snapshots {--month= : The month to generate for (YYYY-MM)} {--all : Process all historic months with activity}';
+    protected $signature = 'account:generate-individual-snapshots {--accountId= : The Account No}';
 
     protected $description = 'Generate point-in-time monthly snapshots using allocation history';
 
     public function handle()
     {
-        if ($this->option('all')) {
-            $this->processAllMonths();
-
+        if (! $this->option('accountId')) {
             return;
         }
 
-        $targetMonth = $this->option('month')
-            ? Carbon::createFromFormat('Y-m', $this->option('month'))
-            : Carbon::now()->subMonth();
-
-        $this->generateForMonth($targetMonth);
+        $this->processAllMonths($this->option('accountId'));
     }
 
-    protected function processAllMonths()
+    protected function processAllMonths(string $accountId)
     {
         // Find the earliest event date to start from
-        $firstEvent = AccountStatement::min('occurred_at');
+        $firstEvent = AccountStatement::query()
+            ->where('account_id', $accountId)
+            ->min('occurred_at');
 
         if (! $firstEvent) {
             $this->error('No account activity found in Statement of Account.');
@@ -47,17 +43,17 @@ class GenerateMonthlySnapshots extends Command
         }
 
         $start = Carbon::parse($firstEvent)->startOfMonth();
-        $end = Carbon::parse('2026-04-30')->startOfMonth(); // today()->startOfMonth();
+        $end = today()->startOfMonth();
 
         while ($start < $end) {
-            $this->generateForMonth($start->copy());
+            $this->generateForMonth($start->copy(), $accountId);
             $start->addMonth();
         }
 
         $this->info('All historic months processed.');
     }
 
-    protected function generateForMonth(Carbon $targetMonth)
+    protected function generateForMonth(Carbon $targetMonth, string $accountId)
     {
         $yearMonth = $targetMonth->format('Y-m');
         $endOfMonth = $targetMonth->copy()->endOfMonth();
@@ -66,7 +62,9 @@ class GenerateMonthlySnapshots extends Command
         $this->info("Generating point-in-time snapshots for {$yearMonth}...");
 
         // Get all impact accounts up to this point in time
-        $accountIds = AccountStatement::where('occurred_at', '<=', $endOfMonth->toDateString())
+        $accountIds = AccountStatement::query()
+            ->where('occurred_at', '<=', $endOfMonth->toDateString())
+            ->where('account_id', $accountId)
             ->distinct()
             ->pluck('account_id');
 

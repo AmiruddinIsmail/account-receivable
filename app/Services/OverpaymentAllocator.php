@@ -23,14 +23,16 @@ final class OverpaymentAllocator
 
             $apply = min($remaining, $item->remaining);
 
-            $allocations[] = [
-                'sourceNo' => $item->paymentNo,
-                'invoiceNo' => $invoiceNo,
-                'component' => $component,
-                'amount' => $apply,
-            ];
+            if ($apply > 0) {
+                $allocations[] = [
+                    'sourceNo' => $item->paymentNo,
+                    'invoiceNo' => $invoiceNo,
+                    'component' => $component,
+                    'amount' => $apply,
+                ];
 
-            $remaining -= $apply;
+                $remaining -= $apply;
+            }
         }
 
         return [
@@ -57,12 +59,14 @@ final class OverpaymentAllocator
 
             $consume = min($remaining, $item->remaining);
 
-            $allocations[] = [
-                'sourceNo' => $item->paymentNo,
-                'amount' => $consume,
-            ];
+            if ($consume > 0) {
+                $allocations[] = [
+                    'sourceNo' => $item->paymentNo,
+                    'amount' => $consume,
+                ];
 
-            $remaining -= $consume;
+                $remaining -= $consume;
+            }
         }
 
         return [

@@ -28,11 +28,14 @@ class InvoiceProjector extends Projector
             'late_charge_billed_amt' => 0,
             'principal_paid_amt' => 0,
             'late_charge_paid_amt' => 0,
+            'principal_credit_amt' => 0,
+            'late_charge_credit_amt' => 0,
             'principal_status' => AccountInvoiceStatusEnum::OPEN->value,
             'late_charge_status' => AccountInvoiceStatusEnum::CLOSED->value,
             'status' => AccountInvoiceStatusEnum::OPEN->value,
             'type' => $event->type,
             'notes' => $event->notes ?? null,
+            'tenure' => $event->tenure,
         ]);
     }
 
@@ -106,10 +109,12 @@ class InvoiceProjector extends Projector
 
         if ($event->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
             $invoice->resolvedPrincipalPaid($event->amount);
+            $invoice->appliedCreditToPrincipalAmount($event->amount);
         }
 
         if ($event->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
             $invoice->resolvedLateChargePaid($event->amount);
+            $invoice->appliedCreditToLateChargeAmount($event->amount);
         }
     }
 
@@ -145,9 +150,11 @@ class InvoiceProjector extends Projector
 
         if ($event->component === AccountAllocationComponentEnum::COMPONENT_PRINCIPAL->value) {
             $invoice->subPrincipalPaid($event->amount);
+            $invoice->removeCreditToPrincipalAmount($event->amount);
         }
         if ($event->component === AccountAllocationComponentEnum::COMPONENT_LATE_CHARGE->value) {
             $invoice->subLateChargePaid($event->amount);
+            $invoice->removeCreditToLateChargeAmount($event->amount);
         }
     }
 }

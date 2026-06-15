@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('account_id')->index();
             $table->string('year_month')->index(); // YYYY-MM
+            $table->integer('tenure')->nullable()->index();
             $table->integer('opening_balance_amt')->default(0);
             $table->integer('closing_balance_amt')->default(0);
             $table->integer('principal_balance_amt')->default(0);
@@ -22,7 +23,15 @@ return new class extends Migration
             $table->integer('principal_billed_amt')->default(0);
             $table->integer('late_charge_billed_amt')->default(0);
             $table->integer('payment_received_amt')->default(0);
+            $table->integer('principal_allocation_amt')->default(0);
+            $table->integer('late_charge_allocation_amt')->default(0);
+            $table->integer('credit_principal_allocation_amt')->default(0);
+            $table->integer('credit_late_charge_allocation_amt')->default(0);
+
             $table->decimal('mia_score', 8, 2)->default(0);
+            $table->integer('dbd')->default(0);
+            $table->date('oldest_overdue_invoice_date')->nullable();
+
             $table->timestamps();
 
             $table->unique(['account_id', 'year_month']);

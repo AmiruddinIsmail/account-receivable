@@ -16,6 +16,7 @@ class PaymentProjector extends Projector
             'occurred_at' => $event->occurredAt,
             'amount' => $event->amount,
             'notes' => $event->notes ?? null,
+            'tenure' => $event->tenure,
         ]);
     }
 }

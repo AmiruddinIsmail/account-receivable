@@ -14,7 +14,19 @@ class AccountInvoice extends Model
 
     protected $guarded = [];
 
-    /* |-------------------------------------------------------------------------- | Apply Payments |-------------------------------------------------------------------------- */
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'occurred_at' => 'date',
+        ];
+    }
+
+    /* |-------------------------------------------------------------------------- | Apply Payments & Credits |-------------------------------------------------------------------------- */
     public function resolvedPrincipalPaid(int $amount): void
     {
         $this->principal_paid_amt += $amount;
@@ -24,6 +36,18 @@ class AccountInvoice extends Model
     public function resolvedLateChargePaid(int $amount): void
     {
         $this->late_charge_paid_amt += $amount;
+        $this->syncStatuses();
+    }
+
+    public function appliedCreditToPrincipalAmount(int $amount): void
+    {
+        $this->principal_credit_amt += $amount;
+        $this->syncStatuses();
+    }
+
+    public function appliedCreditToLateChargeAmount(int $amount): void
+    {
+        $this->late_charge_credit_amt += $amount;
         $this->syncStatuses();
     }
 
@@ -43,6 +67,24 @@ class AccountInvoice extends Model
         if ($this->late_charge_paid_amt < 0) {
             $this->late_charge_paid_amt = 0;
         } $this->syncStatuses();
+    }
+
+    public function removeCreditToPrincipalAmount(int $amount): void
+    {
+        $this->principal_credit_amt -= $amount;
+        if ($this->principal_credit_amt < 0) {
+            $this->principal_credit_amt = 0;
+        }
+        $this->syncStatuses();
+    }
+
+    public function removeCreditToLateChargeAmount(int $amount): void
+    {
+        $this->late_charge_credit_amt -= $amount;
+        if ($this->late_charge_credit_amt < 0) {
+            $this->late_charge_credit_amt = 0;
+        }
+        $this->syncStatuses();
     }
 
     /* |-------------------------------------------------------------------------- | Balance Helpers |-------------------------------------------------------------------------- */

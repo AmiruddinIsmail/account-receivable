@@ -19,11 +19,12 @@ class StatementOfAccountProjector extends Projector
         $this->recordTransaction(
             accountId: $event->accountId,
             referenceNo: $event->referenceNo,
-            type: ucfirst($event->type),
+            type: AccountCommandTypeEnum::INVOICE->value,
             occurredAt: $event->occurredAt,
             debit: $event->amount,
             credit: 0,
-            description: ($event->type == AccountCommandTypeEnum::INVOICE->value) ? 'Monthly Charge ' : 'Other Charge',
+            description: 'Monthly Charge ',
+            tenure: $event->tenure,
         );
     }
 
@@ -50,6 +51,7 @@ class StatementOfAccountProjector extends Projector
             debit: 0,
             credit: $event->amount,
             description: 'Customer Payment',
+            tenure: $event->tenure,
         );
     }
 
@@ -63,6 +65,7 @@ class StatementOfAccountProjector extends Projector
             debit: 0,
             credit: $event->amount,
             description: $event->invoiceNo ? "Credit Note for {$event->invoiceNo}" : 'Credit Note issued',
+            tenure: $event->tenure,
         );
     }
 
@@ -77,6 +80,7 @@ class StatementOfAccountProjector extends Projector
             debit: $event->amount,
             credit: 0,
             description: 'Refund issued to customer',
+            tenure: $event->tenure,
         );
     }
 
@@ -100,7 +104,8 @@ class StatementOfAccountProjector extends Projector
         string $occurredAt,
         int $debit,
         int $credit,
-        string $description
+        string $description,
+        ?int $tenure = null,
     ) {
         $balanceImpact = $debit - $credit;
 
@@ -119,6 +124,10 @@ class StatementOfAccountProjector extends Projector
             $description .= ($invoiceCount + 1);
         }
 
+        if ($tenure === null && $latestStatement != null) {
+            $tenure = $latestStatement->tenure;
+        }
+
         AccountStatement::create([
             'account_id' => $accountId,
             'reference_no' => $referenceNo,
@@ -129,6 +138,7 @@ class StatementOfAccountProjector extends Projector
             'balance_impact' => $balanceImpact,
             'running_balance' => $newBalance,
             'description' => $description,
+            'tenure' => $tenure,
         ]);
     }
 }

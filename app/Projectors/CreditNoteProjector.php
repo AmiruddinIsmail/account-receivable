@@ -2,15 +2,15 @@
 
 namespace App\Projectors;
 
-use App\Events\Refunds\RefundIssued;
-use App\Models\AccountRefund;
+use App\Events\Credits\CreditNoteIssued;
+use App\Models\AccountCredit;
 use Spatie\EventSourcing\EventHandlers\Projectors\Projector;
 
-class RefundProjector extends Projector
+class CreditNoteProjector extends Projector
 {
-    public function onRefundIssued(RefundIssued $event)
+    public function onCreditNoteIssued(CreditNoteIssued $event)
     {
-        AccountRefund::create([
+        AccountCredit::create([
             'account_id' => $event->accountId,
             'reference_no' => $event->referenceNo,
             'occurred_at' => $event->occurredAt,

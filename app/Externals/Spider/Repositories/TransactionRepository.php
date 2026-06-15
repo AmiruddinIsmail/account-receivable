@@ -29,6 +29,8 @@ class TransactionRepository
                 ai.invoice_no AS reference_no,
                 ai.customer_id,
                 ai.total_amount AS amount,
+                o.tenure,
+                o.monthly_subscription as subscription_amt,
                 1 AS sort_order
             FROM
                 ar_invoices ai
@@ -46,6 +48,8 @@ class TransactionRepository
                 CONCAT('LATE-', ai.invoice_no) AS reference_no,
                 ai.customer_id,
                 ai.late_payment_charges AS amount,
+                o.tenure,
+                o.monthly_subscription as subscription_amt,
                 2 AS sort_order
             FROM
                 ar_invoices ai
@@ -64,6 +68,8 @@ class TransactionRepository
                 cn.credit_notes_no AS reference_no,
                 cn.customer_id,
                 cn.total_amount AS amount,
+                o.tenure,
+                o.monthly_subscription as subscription_amt,
                 3 AS sort_order
             FROM
                 ar_credit_notes cn
@@ -81,6 +87,8 @@ class TransactionRepository
                 ABS.checksum AS reference_no,
                 ABS.customer_id,
                 ABS.amount,
+                o.tenure,
+                o.monthly_subscription as subscription_amt,
                 4 AS sort_order
             FROM
                 account_bank_statements ABS

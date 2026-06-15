@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('account_invoices', function (Blueprint $table) {
             $table->id();
             $table->string('account_id')->index();
+            $table->integer('tenure')->nullable()->index();
             $table->string('reference_no')->index();
             $table->date('occurred_at');
             $table->date('due_at');
@@ -21,6 +22,8 @@ return new class extends Migration
             $table->integer('late_charge_billed_amt');
             $table->integer('principal_paid_amt')->default(0);
             $table->integer('late_charge_paid_amt')->default(0);
+            $table->integer('principal_credit_amt')->default(0);
+            $table->integer('late_charge_credit_amt')->default(0);
             $table->string('principal_status')->default('open');
             $table->string('late_charge_status')->default('open');
             $table->string('status')->default('open');
