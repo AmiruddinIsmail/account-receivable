@@ -15,8 +15,6 @@ COPY . .
 
 RUN composer dump-autoload --optimize
 
-RUN php artisan package:discover --ansi
-
 # =====================================
 
 FROM php:8.3-cli-alpine
@@ -55,6 +53,10 @@ RUN chown -R www-data:www-data /var/www
 # Optional start script
 COPY docker/start.sh /usr/local/bin/start
 RUN chmod +x /usr/local/bin/start
+
+RUN chown -R www-data:www-data /var/www
+
+USER www-data
 
 EXPOSE 8000
 
