@@ -2,16 +2,13 @@
 
 namespace App\Console\Commands;
 
-use App\Externals\Spider\Actions\ProcessTransactionToEvent;
-use App\Notifications\NotifyDailyTransactionCompleted;
+use App\Externals\Spider\Actions\ProcessTransactionToTable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Notification;
-use NotificationChannels\MicrosoftTeams\MicrosoftTeamsChannel;
 
-class DailySpiderTransactionProcessor extends Command
+class ProcessLegacyTransactionCommand extends Command
 {
-    protected $signature = 'app:daily-spider-transaction-processor {--import-historical : Mute projectors for fast mass import} {--startDate=} {--endDate=} {--accountId=}';
+    protected $signature = 'app:spider-transaction-processor {--startDate=} {--endDate=}';
 
     protected $description = 'A command to fetch and process all spider transactions';
 
@@ -30,15 +27,9 @@ class DailySpiderTransactionProcessor extends Command
             $endedAt = Carbon::parse($this->option('endDate'));
         }
 
-        $historical = $this->option('import-historical');
-
-        $accountId = $this->option('accountId') ?? null;
-
-        (new ProcessTransactionToEvent)->handle($startedAt, $endedAt, $this->loggedResult(...), $historical, $accountId, false);
+        (new ProcessTransactionToTable)->handle($startedAt, $endedAt, $this->loggedResult(...), false);
 
         $this->info('Spider transactions processed successfully from '.$startedAt.' to '.$endedAt);
-
-        Notification::route(MicrosoftTeamsChannel::class, null)->notify(new NotifyDailyTransactionCompleted);
 
         return 0;
     }

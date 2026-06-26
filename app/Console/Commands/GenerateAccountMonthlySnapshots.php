@@ -148,7 +148,8 @@ class GenerateAccountMonthlySnapshots extends Command
             $accountStat = AccountStatistics::query()
                 ->where('account_id', $accountId)
                 ->first();
-            if ($accountStat === null) {
+
+            if ($accountStat === null || $accountStat->tenure === null) {
                 continue;
             }
 

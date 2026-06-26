@@ -28,6 +28,7 @@ use App\States\InvoiceState;
 use App\States\OverpaymentState;
 use App\States\PaymentState;
 use Exception;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Spatie\EventSourcing\AggregateRoots\AggregateRoot;
 
@@ -267,9 +268,17 @@ class AccountAggregate extends AggregateRoot
 
         // Validate refund limits before recording any events
         $refundableBalance = $this->calculateRefundableBalance();
+        $diff = $amount - $refundableBalance;
+        if ($amount > $refundableBalance && $diff > 500) {
+            throw new Exception('Refund exceeds refundable amount. diff: '.$diff);
+        }
 
-        if ($amount > $refundableBalance) {
-            throw new Exception('Refund exceeds refundable amount');
+        if ($diff > 0) {
+            $amount -= $diff;
+        }
+
+        if ($amount <= 0) {
+            return $this;
         }
 
         $this->recordThat(new RefundIssued(
@@ -774,5 +783,15 @@ class AccountAggregate extends AggregateRoot
                 throw new Exception("Negative allocation balance: {$id}");
             }
         }
+    }
+
+    public function getVersion(): int
+    {
+        return $this->aggregateVersion;
+    }
+
+    public function getInvoicesCount(): int
+    {
+        return count($this->invoices);
     }
 }
