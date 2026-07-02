@@ -47,7 +47,7 @@ class GenerateMonthlySnapshots extends Command
         }
 
         $start = Carbon::parse($firstEvent)->startOfMonth();
-        $end = Carbon::parse('2026-04-30')->startOfMonth(); // today()->startOfMonth();
+        $end = today()->startOfMonth();
 
         while ($start < $end) {
             $this->generateForMonth($start->copy());
@@ -150,7 +150,8 @@ class GenerateMonthlySnapshots extends Command
             $accountStat = AccountStatistics::query()
                 ->where('account_id', $accountId)
                 ->first();
-            if ($accountStat === null) {
+
+            if ($accountStat === null || $accountStat->tenure === null) {
                 continue;
             }
 

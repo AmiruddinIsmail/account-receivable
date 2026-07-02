@@ -1,10 +1,17 @@
 <?php
 
+use App\Aggregates\AccountAggregate;
+use App\Externals\Spider\Actions\ProcessTransactionToTable;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
+
+    // (new ProcessTransactionToTable)->handle('2023-01-01', '2026-05-31');
+    // AccountAggregate::retrieve('OR-02747-RNPM')
+    //     ->invoiceCreated('INV-2307-0292-F', '2023-08-17', 349745, 'Invoice', 12, 69949)
+    //     ->persist();
 
     // AccountAggregate::retrieve('A001')
     //     ->invoiceCreated('INV-001', '2026-01-01', 10000)
