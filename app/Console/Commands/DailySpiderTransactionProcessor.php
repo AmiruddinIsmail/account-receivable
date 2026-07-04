@@ -21,7 +21,7 @@ class DailySpiderTransactionProcessor extends Command
     public function handle()
     {
         $endedAt = today();
-        $startedAt = today()->subDays(7);
+        $startedAt = today()->subDays(5);
         if ($this->option('startDate')) {
             $startedAt = Carbon::parse($this->option('startDate'));
         }
@@ -33,6 +33,8 @@ class DailySpiderTransactionProcessor extends Command
         $historical = $this->option('import-historical');
 
         $accountId = $this->option('accountId') ?? null;
+
+        $this->info('Starting Spider transaction processing from '.$startedAt.' to '.$endedAt);
 
         (new ProcessTransactionToEvent)->handle($startedAt, $endedAt, $this->loggedResult(...), $historical, $accountId, false);
 

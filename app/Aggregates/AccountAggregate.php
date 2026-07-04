@@ -28,7 +28,6 @@ use App\States\InvoiceState;
 use App\States\OverpaymentState;
 use App\States\PaymentState;
 use Exception;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Spatie\EventSourcing\AggregateRoots\AggregateRoot;
 

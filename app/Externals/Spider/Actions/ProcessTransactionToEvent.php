@@ -6,7 +6,6 @@ use App\Aggregates\AccountAggregate;
 use App\Enums\InvoiceTypeEnum;
 use App\Externals\Spider\Repositories\TransactionRepository;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Spatie\EventSourcing\Facades\Projectionist;
 
 class ProcessTransactionToEvent
@@ -14,6 +13,8 @@ class ProcessTransactionToEvent
     public function handle(string $startDate, string $endDate, ?callable $output, bool $muteProjectors, ?string $accountId, bool $local = false)
     {
         DB::disableQueryLog();
+
+        $output && $output('info', 'Processing Spider transactions from '.$startDate.' to '.$endDate.'...');
 
         if ($muteProjectors) {
             $output && $output('info', 'NOTICE: Muting all projectors for fast historical import. Run `php artisan event-sourcing:replay` afterwards.');
@@ -35,9 +36,10 @@ class ProcessTransactionToEvent
         foreach ($transactions as $transaction) {
             try {
                 $this->processTransactionRow($transaction, $aggregates);
+                $output && $output('info', 'processing row: '.$transaction->reference_no);
                 $batchCount++;
                 $totalProcessed++;
-                if ($batchCount >= 1000) {
+                if ($batchCount >= 200) {
                     $output && $output('info', "Processed {$totalProcessed} transactions. Persisting batch (Current Date: {$transaction->date_at})...");
                     $this->persistAggregates($aggregates);
                     $aggregates = [];
@@ -50,8 +52,9 @@ class ProcessTransactionToEvent
 
             } catch (\Exception $e) {
                 $errorMsg = 'Error processing row '.json_encode($transaction).': '.$e->getMessage();
-                Log::error("\n".$errorMsg);
-                $output && $output('error', $errorMsg);
+                if (! in_array($e->getMessage(), ['Duplicate invoice', 'Duplicate payment', 'Duplicate late charge', 'Duplicate credit note', 'Duplicate refund'])) {
+                    $output && $output('error', $errorMsg);
+                }
             }
         }
 
