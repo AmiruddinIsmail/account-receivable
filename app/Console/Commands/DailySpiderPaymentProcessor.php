@@ -2,18 +2,18 @@
 
 namespace App\Console\Commands;
 
-use App\Externals\Spider\Actions\ProcessTransactionToEvent;
+use App\Externals\Spider\Actions\ProcessPaymentToEvent;
 use App\Notifications\NotifyDailyTransactionCompleted;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 use NotificationChannels\MicrosoftTeams\MicrosoftTeamsChannel;
 
-class DailySpiderTransactionProcessor extends Command
+class DailySpiderPaymentProcessor extends Command
 {
-    protected $signature = 'app:daily-spider-transaction-processor {--import-historical : Mute projectors for fast mass import} {--startDate=} {--endDate=} {--accountId=}';
+    protected $signature = 'app:daily-spider-payment-processor {--startDate=} {--endDate=}';
 
-    protected $description = 'A command to fetch and process all spider transactions';
+    protected $description = 'A command to fetch and process all spider payments';
 
     /**
      * Execute the console command.
@@ -21,7 +21,7 @@ class DailySpiderTransactionProcessor extends Command
     public function handle()
     {
         $endedAt = today();
-        $startedAt = today()->subDays(2);
+        $startedAt = today()->subDays(7);
         if ($this->option('startDate')) {
             $startedAt = Carbon::parse($this->option('startDate'));
         }
@@ -30,15 +30,9 @@ class DailySpiderTransactionProcessor extends Command
             $endedAt = Carbon::parse($this->option('endDate'));
         }
 
-        $historical = $this->option('import-historical');
+        (new ProcessPaymentToEvent)->handle($startedAt, $endedAt, $this->loggedResult(...));
 
-        $accountId = $this->option('accountId') ?? null;
-
-        $this->info('Starting Spider transaction processing from '.$startedAt.' to '.$endedAt);
-
-        (new ProcessTransactionToEvent)->handle($startedAt, $endedAt, $this->loggedResult(...), $historical, $accountId, false);
-
-        $this->info('Spider transactions processed successfully from '.$startedAt.' to '.$endedAt);
+        $this->info('Spider payments processed successfully from '.$startedAt.' to '.$endedAt);
 
         Notification::route(MicrosoftTeamsChannel::class, null)->notify(new NotifyDailyTransactionCompleted);
 

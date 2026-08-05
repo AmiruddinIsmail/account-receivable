@@ -93,7 +93,8 @@ class GenerateMonthlySnapshots extends Command
                 ->selectRaw('
                     SUM(CASE WHEN type = "'.AccountCommandTypeEnum::INVOICE->value.'" THEN debit_amt ELSE 0 END) as billed_principal,
                     SUM(CASE WHEN type = "'.AccountCommandTypeEnum::LATE_CHARGE->value.'" THEN debit_amt ELSE 0 END) as billed_late_charge,
-                    SUM(credit_amt) as total_collected
+                    SUM(CASE WHEN type = "'.AccountCommandTypeEnum::PAYMENT->value.'" THEN credit_amt ELSE 0 END) as total_collected,
+                    SUM(CASE WHEN type = "'.AccountCommandTypeEnum::CREDIT_NOTE->value.'" THEN credit_amt ELSE 0 END) as total_credit_note
                 ')->first();
 
             // 3. POINT-IN-TIME BALANCE RECONSTRUCTION
@@ -179,6 +180,7 @@ class GenerateMonthlySnapshots extends Command
                 'principal_billed_amt' => (int) ($monthlyMetrics->billed_principal ?? 0),
                 'late_charge_billed_amt' => (int) ($monthlyMetrics->billed_late_charge ?? 0),
                 'payment_received_amt' => (int) ($monthlyMetrics->total_collected ?? 0),
+                'credit_note_amt' => (int) ($monthlyMetrics->total_credit_note ?? 0),
                 'principal_allocation_amt' => $paymentAllocationsForMonth[0],
                 'late_charge_allocation_amt' => $paymentAllocationsForMonth[1],
                 'credit_principal_allocation_amt' => $creditAllocationsForMonth[0],
