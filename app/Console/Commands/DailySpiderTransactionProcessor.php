@@ -11,7 +11,7 @@ use NotificationChannels\MicrosoftTeams\MicrosoftTeamsChannel;
 
 class DailySpiderTransactionProcessor extends Command
 {
-    protected $signature = 'app:daily-spider-transaction-processor {--import-historical : Mute projectors for fast mass import} {--startDate=} {--endDate=} {--accountId=}';
+    protected $signature = 'app:daily-spider-transaction-processor {--import-historical : Mute projectors for fast mass import} {--startDate=} {--endDate=} {--accountId=} {--local=}';
 
     protected $description = 'A command to fetch and process all spider transactions';
 
@@ -34,9 +34,11 @@ class DailySpiderTransactionProcessor extends Command
 
         $accountId = $this->option('accountId') ?? null;
 
+        $isLocal = $this->option('local') ?? false;
+
         $this->info('Starting Spider transaction processing from '.$startedAt.' to '.$endedAt);
 
-        (new ProcessTransactionToEvent)->handle($startedAt, $endedAt, $this->loggedResult(...), $historical, $accountId, false);
+        (new ProcessTransactionToEvent)->handle($startedAt, $endedAt, $this->loggedResult(...), $historical, $accountId, $isLocal);
 
         $this->info('Spider transactions processed successfully from '.$startedAt.' to '.$endedAt);
 
